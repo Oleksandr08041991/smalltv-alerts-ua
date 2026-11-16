@@ -36,6 +36,7 @@ private:
   uint32_t phaseUntilMs_=0, roamStartMs_=0;
   uint32_t nextPopupMs_=0, untilMs_=0, nextAnimationMs_=0;
   uint16_t speechSerial_=0;
+  uint8_t motionVariant_=0;  // 20 distinct flight motions after phrases
   uint8_t selectedIndex_=0,mood_=0;
   int16_t prevX_=-1,prevY_=-1;
 };
