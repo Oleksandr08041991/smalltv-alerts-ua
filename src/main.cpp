@@ -30,6 +30,9 @@
 #if WITH_TICKER
 #include "TickerMode.h"
 #endif
+#if WITH_ALERTS
+#include "AlertsMode.h"
+#endif
 #if WITH_USAGE
 #include "UsageMode.h"
 #endif
@@ -46,6 +49,9 @@
 // The compiled-in features, in display order. main.cpp holds no per-feature
 // state of its own — each mode owns its fetch/render/dirty tracking.
 static DisplayMode* kModes[] = {
+#if WITH_ALERTS
+  &g_alertsMode,
+#endif
 #if WITH_TICKER
   &g_tickerMode,
 #endif
@@ -75,6 +81,7 @@ static bool carouselHas(const Settings& s, const DisplayMode* m) {
   switch (m->modeConst()) {
     case MODE_STOCKS: return s.carouselTicker;
     case MODE_USAGE:  return s.carouselUsage;
+    case MODE_ALERTS: return s.carouselAlerts;
     case MODE_RADAR:  return s.carouselRadar;
 #if WITH_HA
     case MODE_HA:     return s.carouselHa;
@@ -454,6 +461,11 @@ void loop() {
     delay(5);
     return;  // network-info screen is up; don't let the mode repaint over it
   }
+#endif
+
+  // --- STA mode: background air-alert monitoring is independent of the selected screen ---
+#if WITH_ALERTS
+  g_alertsMode.poll(g_settings);
 #endif
 
   // --- STA mode: the active feature fetches + renders itself ---
