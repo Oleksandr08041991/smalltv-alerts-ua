@@ -367,31 +367,25 @@ void setup() {
   Serial.println("[boot] net");
   netAllowRetry(!g_safeMode);   // a retry's reboot would clear the crash flag
   netBegin(g_settings, bootProgress);
-  // Arm SNTP now that WiFi (STA) is up — but only if night mode is enabled, so a
-  // ticker-only device doesn't pay the SNTP heap cost (which can starve the cash.ch
-  // TLS handshake on the ESP8266). clockReapply arms it iff needed. Skipped after a
-  // crash so a fault in here can't boot-loop before the web server starts (the
-  // device then comes up in safe mode, OTA-recoverable, instead of needing UART).
-  // ...unless a WireGuard tunnel is configured, which needs the clock and only
-  // exists on an ESP32 where the heap argument for the skip does not apply.
-  if (!g_safeMode || wgNeedsClock(g_settings)) clockReapply(g_settings);
-
-  // Optional WireGuard tunnel (ESP32 targets). Arms the state machine only;
-  // the bring-up itself runs from loop(), so nothing here can delay the web
-  // server. A crash last boot feeds the three-strikes hold that keeps a bad
-  // tunnel config from locking the device out of its own web UI.
-  wgBegin(g_settings, g_safeMode);
-
-  // A GitHub update queued from the web UI runs now, before the features claim
-  // the heap (the download needs a 16 KB TLS buffer that only fits at boot).
-  // On success it reboots into the new image; a no-op stub on the ESP32 targets.
+  // OTA gets first access to the contiguous heap right after Wi-Fi joins:
+  // SNTP and optional tunnel setup happen only AFTER this completes.
+  // ESP8266 requires a 16KB HTTPS CDN receive buffer; initializing other
+  // network services first was a cause of "not enough heap" at update time.
+  // The request is one-shot and consumed by otaBootUpdate(), preventing loops.
   if (otaBootRequested()) {
     Serial.println("[boot] github update");
     gfxBoot("SmallTV", "updating...");
     otaBootUpdate(g_settings);
-    gfxBoot("SmallTV", "update failed");   // still here -> failed; details in the web UI
+    gfxBoot("SmallTV", "update failed"); // on success OTA reboots automatically
     delay(1200);
   }
+
+  // Arm SNTP after the critical OTA memory window. Normal firmware time and
+  // night-mode behaviour are otherwise unchanged.
+  if (!g_safeMode || wgNeedsClock(g_settings)) clockReapply(g_settings);
+
+  // WireGuard is not compiled for our ESP8266; unchanged for larger boards.
+  wgBegin(g_settings, g_safeMode);
 
   Serial.println("[boot] web");
   webPortalBegin(g_settings);
