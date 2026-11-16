@@ -667,9 +667,15 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   s.ticker.toJson(root["ticker"].to<JsonObject>());
 #endif
   s.alerts.toJson(root["alerts"].to<JsonObject>(), includeSecrets);
+#if WITH_USAGE
   s.usage.toJson(root["usage"].to<JsonObject>());
+#endif
+#if WITH_RADAR
   s.radar.toJson(root["radar"].to<JsonObject>());
+#endif
+#if WITH_HA
   s.ha.toJson(root["ha"].to<JsonObject>(), includeSecrets);
+#endif
   s.clock.toJson(root["clock"].to<JsonObject>());
   s.display.toJson(root["display"].to<JsonObject>());
   s.wg.toJson(root["wg"].to<JsonObject>(), includeSecrets);
@@ -766,11 +772,17 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
 #endif
   if (root["alerts"].is<JsonObjectConst>()) s.alerts.fromJson(root["alerts"].as<JsonObjectConst>());
   JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
+#if WITH_USAGE
   s.usage.fromJson(u);
+#endif
   // Radar has no legacy flat layout; only apply when its nested object is present.
+#if WITH_RADAR
   if (root["radar"].is<JsonObjectConst>()) s.radar.fromJson(root["radar"].as<JsonObjectConst>());
+#endif
   // HA has no legacy flat layout either; only apply when its object is present.
+#if WITH_HA
   if (root["ha"].is<JsonObjectConst>()) s.ha.fromJson(root["ha"].as<JsonObjectConst>());
+#endif
   if (root["clock"].is<JsonObjectConst>()) s.clock.fromJson(root["clock"].as<JsonObjectConst>());
   if (root["display"].is<JsonObjectConst>()) s.display.fromJson(root["display"].as<JsonObjectConst>());
   if (root["wg"].is<JsonObjectConst>()) s.wg.fromJson(root["wg"].as<JsonObjectConst>());
