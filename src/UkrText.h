@@ -1,6 +1,10 @@
 // UkrText.h — small uppercase Ukrainian 5x7 bitmap font for the 240x240 display.
 // Font shapes authored for this project; built-in ASCII still uses Arduino_GFX.
-// UTF-8 lowercase Ukrainian is mapped to uppercase. Only Cyrillic capitals needed
+// UTF-8 lowercase Ukrainian is mapped to uppercase. Glyph lookup tables live
+// in DRAM (intentionally NOT PROGMEM): the ESP8266 crash at EPC 0x402187c8
+// was in drawAt during a non-32-bit access to flash at 0x402a9b66.
+// The 306-byte RAM tradeoff avoids any alignment-sensitive flash access.
+// Only Cyrillic capitals needed
 // for alert labels are supported; unknown characters show a blank glyph.
 #pragma once
 #include <Arduino.h>
@@ -8,8 +12,8 @@
 #include "Gfx.h"
 
 namespace ukrtext {
-static const uint16_t kCodepoints[] PROGMEM = {0x410, 0x411, 0x412, 0x413, 0x490, 0x414, 0x415, 0x404, 0x416, 0x417, 0x418, 0x406, 0x407, 0x419, 0x41A, 0x41B, 0x41C, 0x41D, 0x41E, 0x41F, 0x420, 0x421, 0x422, 0x423, 0x424, 0x425, 0x426, 0x427, 0x428, 0x429, 0x42C, 0x42E, 0x42F, 0x27};
-static const uint8_t kRows[][7] PROGMEM = {
+static uint16_t kCodepoints[] = {0x410, 0x411, 0x412, 0x413, 0x490, 0x414, 0x415, 0x404, 0x416, 0x417, 0x418, 0x406, 0x407, 0x419, 0x41A, 0x41B, 0x41C, 0x41D, 0x41E, 0x41F, 0x420, 0x421, 0x422, 0x423, 0x424, 0x425, 0x426, 0x427, 0x428, 0x429, 0x42C, 0x42E, 0x42F, 0x27};
+static uint8_t kRows[][7] = {
   {0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001},
   {0b11111, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b11110},
   {0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110},
@@ -66,7 +70,7 @@ inline uint16_t upper(uint16_t cp) {
 }
 inline int glyphIndex(uint16_t cp) {
   for (uint8_t i=0;i<kCount;i++)
-    if (pgm_read_word(&kCodepoints[i])==cp) return i;
+    if (kCodepoints[i] == cp) return i;
   return -1;
 }
 inline int textWidth(const char* s, uint8_t scale=1) {
@@ -83,7 +87,7 @@ inline void drawAt(Arduino_GFX* gfx, const char* s, int x, int y,
     int idx=glyphIndex(cp);
     if (idx >= 0) {
       for (int ry=0;ry<7;ry++) {
-        uint8_t mask=pgm_read_byte(&kRows[idx][ry]);
+        uint8_t mask=kRows[idx][ry];
         for (int col=0;col<5;col++)
           if (mask & (1u << (4-col)))
             gfx->fillRect(x+col*scale,y+ry*scale,scale,scale,color);
