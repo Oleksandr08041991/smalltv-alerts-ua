@@ -49,13 +49,15 @@ static void drawQuote(Arduino_GFX* gfx,const char* quote) {
   String lines[5];
   uint8_t scale=3;
   uint8_t n=wrapText(quote,scale,lines);
-  if(n==0||n>4) {
+  // At 3x, keep at most three rows so the enlarged author name has its
+  // own reserved area. For longer lines use up to five 2x rows.
+  if(n==0||n>3) {
     scale=2;
     n=wrapText(quote,scale,lines);
   }
   if(!n)return;
-  const int step=(scale==3)?24:19;
-  const int first=(scale==3)?39:42;
+  const int step=(scale==3)?25:17;
+  const int first=(scale==3)?39:34;
   for(uint8_t i=0;i<n && i<5;i++)
     ukrtext::centered(gfx,lines[i].c_str(),first+i*step,scale,navy());
 }
