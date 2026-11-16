@@ -763,7 +763,7 @@ void webPortalLoop() {
     // download before graphics/web feature allocations. This is an intentional
     // user action; no background update or unsolicited restart.
     if (otaRequestBootUpdate("latest")) {
-      g_updateMsg = "queued; checking release after reboot...";
+      g_updateMsg = "updating...";
       scheduleReboot(500);
     } else {
       g_updateMsg = F("could not queue update (storage error)");
