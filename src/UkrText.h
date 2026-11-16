@@ -58,10 +58,20 @@ inline uint16_t nextCodepoint(const char*& p) {
   if ((a & 0xE0) == 0xC0 && (b & 0xC0) == 0x80) {
     ++p; return (uint16_t(a & 31) << 6) | (b & 63);
   }
+  if ((a & 0xF0) == 0xE0 && (b & 0xC0) == 0x80) {
+    uint8_t c = static_cast<uint8_t>(p[1]);
+    if ((c & 0xC0) == 0x80) {
+      p += 2;
+      return (uint16_t(a & 15) << 12) | (uint16_t(b & 63) << 6) | (c & 63);
+    }
+  }
   return '?';
 }
 inline uint16_t upper(uint16_t cp) {
   if (cp >= 0x430 && cp <= 0x44F) return cp - 32;
+  if (cp == 0x2019 || cp == 0x2018 || cp == 0x02BC) return 0x27;
+  if (cp == 0x2014 || cp == 0x2013) return '-';
+  if (cp == 0x2022) return ':';
   if (cp == 0x491) return 0x490;
   if (cp == 0x454) return 0x404;
   if (cp == 0x456) return 0x406;
