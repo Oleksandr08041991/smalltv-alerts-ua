@@ -129,6 +129,21 @@ void TickerSettings::fromJson(JsonObjectConst o) {
 #endif // WITH_TICKER
 
 // ===========================================================================
+// Aviation mascot preferences (100 original and public-domain adapted quotes)
+// ===========================================================================
+void MascotSettings::setDefaults(){enabled=true;intervalMin=30;focus=0;}
+void MascotSettings::toJson(JsonObject o) const {
+  o["enabled"]=enabled;
+  o["intervalMin"]=intervalMin;
+  o["focus"]=focus;
+}
+void MascotSettings::fromJson(JsonObjectConst o) {
+  if(o["enabled"].is<bool>()) enabled=o["enabled"];
+  if(o["intervalMin"].is<int>()) intervalMin=constrain((int)o["intervalMin"],5,240);
+  if(o["focus"].is<int>())focus=constrain((int)o["focus"],0,2);
+}
+
+// ===========================================================================
 // Air Alerts slice
 // ===========================================================================
 void AlertsSettings::setDefaults() {
@@ -550,6 +565,7 @@ void Settings::setDefaults() {
   carouselTicker = (bool)WITH_TICKER;
   carouselAlerts = true;
   carouselClock = false;
+  carouselMascot = false;
   carouselUsage = carouselRadar = carouselHa = true;
   carouselTheme = false;   // opt in: needs an installed theme, else the slot shows an error
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
@@ -563,6 +579,7 @@ void Settings::setDefaults() {
   ticker.setDefaults();
 #endif
   alerts.setDefaults();
+  mascot.setDefaults();
   usage.setDefaults();
   radar.setDefaults();
   ha.setDefaults();
@@ -647,7 +664,8 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
                             : (s.mode == MODE_HA)       ? "ha"
                             : (s.mode == MODE_CAROUSEL) ? "carousel"
                             : (s.mode == MODE_ALERTS)   ? "alerts"
-                            : (s.mode == MODE_CLOCK)    ? "clock" : "stocks";
+                            : (s.mode == MODE_CLOCK)    ? "clock"
+                            : (s.mode == MODE_MASCOT)   ? "mascot" : "stocks";
   root["carouselSec"]       = s.carouselSec;
   root["carouselTicker"]    = s.carouselTicker;
   root["carouselUsage"]     = s.carouselUsage;
@@ -656,6 +674,7 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   root["carouselTheme"]     = s.carouselTheme;
   root["carouselAlerts"]    = s.carouselAlerts;
   root["carouselClock"]     = s.carouselClock;
+  root["carouselMascot"]    = s.carouselMascot;
   root["httpTimeout"]       = s.httpTimeout;
   root["brightness"]        = s.brightness;
   root["autoBrightness"]    = s.autoBrightness;
@@ -667,6 +686,7 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   s.ticker.toJson(root["ticker"].to<JsonObject>());
 #endif
   s.alerts.toJson(root["alerts"].to<JsonObject>(), includeSecrets);
+  s.mascot.toJson(root["mascot"].to<JsonObject>());
 #if WITH_USAGE
   s.usage.toJson(root["usage"].to<JsonObject>());
 #endif
@@ -734,11 +754,18 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
            : m.equalsIgnoreCase("usage")    ? MODE_USAGE
            : m.equalsIgnoreCase("ha")       ? MODE_HA
            : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL
+           : m.equalsIgnoreCase("mascot")   ? MODE_MASCOT
            : m.equalsIgnoreCase("clock")    ? MODE_CLOCK
            : m.equalsIgnoreCase("alerts")   ? MODE_ALERTS
-           : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_USAGE)
+           : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_CLOCK)
            : s.mode;   // empty or unknown: a save that names no mode keeps the stored one
   }
+  // Existing stored legacy modes must not remain selected after slimming.
+#if !WITH_HA || !WITH_RADAR || !WITH_USAGE || !WITH_TICKER
+  if ((!WITH_HA && s.mode==MODE_HA) || (!WITH_RADAR && s.mode==MODE_RADAR) ||
+      (!WITH_USAGE && s.mode==MODE_USAGE) || (!WITH_TICKER && s.mode==MODE_STOCKS))
+    s.mode=MODE_CLOCK;
+#endif
   if (root["themeId"].is<const char*>()) {
     String id = root["themeId"].as<String>();
     bool valid = id.length() <= 48;
@@ -756,6 +783,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   if (root["carouselTheme"].is<bool>())   s.carouselTheme = root["carouselTheme"];
   if (root["carouselAlerts"].is<bool>())  s.carouselAlerts = root["carouselAlerts"];
   if (root["carouselClock"].is<bool>())   s.carouselClock = root["carouselClock"];
+  if (root["carouselMascot"].is<bool>())  s.carouselMascot = root["carouselMascot"];
 
   if (root["httpTimeout"].is<int>())        s.httpTimeout = constrain((int)root["httpTimeout"], 1000, 20000);
   if (root["brightness"].is<int>())         s.brightness = constrain((int)root["brightness"], 0, 100);
@@ -771,6 +799,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   s.ticker.fromJson(t);
 #endif
   if (root["alerts"].is<JsonObjectConst>()) s.alerts.fromJson(root["alerts"].as<JsonObjectConst>());
+  if (root["mascot"].is<JsonObjectConst>()) s.mascot.fromJson(root["mascot"].as<JsonObjectConst>());
   JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
 #if WITH_USAGE
   s.usage.fromJson(u);
