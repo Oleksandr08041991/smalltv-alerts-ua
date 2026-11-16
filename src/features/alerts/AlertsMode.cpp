@@ -20,7 +20,7 @@ static const uint16_t kUids[27] = {
 };
 // Schematic centres (not administrative boundary coordinates) of the 27 units.
 // The display labels it as a schematic, not a precise district-by-district map.
-static const uint8_t kDots[27][2] PROGMEM = {
+static uint8_t kDots[27][2] = {
   {143,187},{42,70},{91,116},{165,125},{190,144},{89,78},
   {27,132},{162,151},{52,124},{111,89},{112,95},{130,135},
   {208,119},{39,100},{126,161},{101,173},{150,103},{64,75},
@@ -29,7 +29,7 @@ static const uint8_t kDots[27][2] PROGMEM = {
 };
 // Outline is an intentionally simplified vector silhouette of Ukraine.
 // It is NOT a political/raion boundary map.
-static const uint8_t kOutline[][2] PROGMEM = {
+static uint8_t kOutline[][2] = {
   {13,74},{31,68},{45,55},{70,57},{83,64},{103,51},{129,43},
   {157,46},{174,58},{184,67},{209,75},{225,87},{222,111},
   {228,128},{214,142},{194,151},{183,162},{165,169},{155,180},
@@ -153,10 +153,10 @@ static void drawCountry(Arduino_GFX* gfx) {
     int cuts[24],n=0;
     for(int i=0;i<count;i++){
       int j=(i+1)%count;
-      int x1=pgm_read_byte(&kOutline[i][0]);
-      int y1=pgm_read_byte(&kOutline[i][1]);
-      int x2=pgm_read_byte(&kOutline[j][0]);
-      int y2=pgm_read_byte(&kOutline[j][1]);
+      int x1=kOutline[i][0];
+      int y1=kOutline[i][1];
+      int x2=kOutline[j][0];
+      int y2=kOutline[j][1];
       if(((y1<=y)&&(y<y2))||((y2<=y)&&(y<y1))){
         if(n<24)cuts[n++]=x1+(y-y1)*(x2-x1)/(y2-y1);
       }
@@ -169,8 +169,8 @@ static void drawCountry(Arduino_GFX* gfx) {
   }
   for(int i=0;i<count;i++){
     int j=(i+1)%count;
-    gfx->drawLine(pgm_read_byte(&kOutline[i][0]),pgm_read_byte(&kOutline[i][1]),
-                  pgm_read_byte(&kOutline[j][0]),pgm_read_byte(&kOutline[j][1]),C_GRAY);
+    gfx->drawLine(kOutline[i][0],kOutline[i][1],
+                  kOutline[j][0],kOutline[j][1],C_GRAY);
   }
 }
 void AlertsMode::render(const Settings& s){
@@ -180,8 +180,8 @@ void AlertsMode::render(const Settings& s){
   drawCountry(gfx);
   bool usable=fresh(s);
   for(int i=0;i<27;i++){
-    uint8_t x=pgm_read_byte(&kDots[i][0]);
-    uint8_t y=pgm_read_byte(&kDots[i][1]);
+    uint8_t x=kDots[i][0];
+    uint8_t y=kDots[i][1];
     uint16_t c=usable?colorFor(oblasts_[i]):C_DGRAY;
     gfx->fillCircle(x,y,i==9||i==18?3:5,c);
     if(kUids[i]==s.alerts.uid){
