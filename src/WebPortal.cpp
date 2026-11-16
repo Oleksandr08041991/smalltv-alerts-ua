@@ -9,7 +9,12 @@
 #include "Net.h"
 #include "Gfx.h"
 #include "OtaUpdate.h"
+#if WITH_ALERTS
+#include "AlertsMode.h"
+#endif
+#if WITH_TICKER
 #include "StockClient.h"
+#endif
 #include "UsageClient.h"
 #if WITH_RADAR
 #include "RadarClient.h"
@@ -131,6 +136,7 @@ static void handleGetConfig() {
   // Which features are compiled in (so a lean build hides the tabs it dropped).
   JsonObject feat = root["features"].to<JsonObject>();
   feat["ticker"] = (bool)WITH_TICKER;
+  feat["alerts"] = (bool)WITH_ALERTS;
   feat["usage"]  = (bool)WITH_USAGE;
   feat["radar"]  = (bool)WITH_RADAR;
   feat["ha"]     = (bool)WITH_HA;
@@ -439,6 +445,21 @@ static void handleImport() {
   scheduleReboot(800);
 }
 
+#if WITH_ALERTS
+// No API credentials are returned. Token settings are stored only on device.
+static void handleAlertsStatus() {
+  if (!requireAuth()) return;
+  JsonDocument doc;
+  doc["status"] = String(g_alertsMode.status());
+  doc["fresh"] = g_alertsMode.fresh(*S);
+  doc["lastOkAgeSec"] = g_alertsMode.ageSec();
+  doc["http"] = g_alertsMode.lastHttp();
+  doc["message"] = g_alertsMode.error();
+  doc["uid"] = S->alerts.uid;
+  sendJson(doc);
+}
+#endif
+
 static void handleRefresh() {
   if (!requireAuth()) return;
 #if WITH_TICKER
@@ -684,6 +705,9 @@ void webPortalBegin(Settings& settings) {
   server.on("/api/config", HTTP_GET, handleGetConfig);
   server.on("/api/config", HTTP_POST, handlePostConfig);
   server.on("/api/status", HTTP_GET, handleStatus);
+#if WITH_ALERTS
+  server.on("/api/alerts/status", HTTP_GET, handleAlertsStatus);
+#endif
   server.on("/api/scan", HTTP_GET, handleScan);
   server.on("/api/reboot", HTTP_POST, handleReboot);
   server.on("/api/factory", HTTP_POST, handleFactory);
