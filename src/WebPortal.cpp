@@ -651,6 +651,10 @@ static void handleUpdateUpload() {
     return;
   }
   if (up.status == UPLOAD_FILE_START) {
+    // Free rebuildable UI allocations before reserving the 4KB flash-write
+    // buffer. Browser-assisted OTA uses this same endpoint, but never opens
+    // a large TLS session on the ESP8266 itself.
+    appRelease();
 #if defined(SMALLTV_FAMILY_ESP8266)
     WiFiUDP::stopAll();   // free UDP sockets so the OTA has max contiguous flash/heap
     g_updateRefused = false;
