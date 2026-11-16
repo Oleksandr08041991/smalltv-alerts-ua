@@ -84,6 +84,9 @@ static inline bool rounded(int x,int y,int left,int top,int width,int height,int
 // 5 gold, 6 steel, 7 blue highlight, 8 canopy, 9 pink, 10 sparkle,
 // 11 navy shadow, 12 mid-blue side, 13 white reflection.
 static bool triangle(int x,int y,int ax,int ay,int bx,int by,int cx,int cy){
+  // Reject most background pixels without expensive signed-area products.
+  if(x<min(ax,min(bx,cx)) || x>max(ax,max(bx,cx)) ||
+     y<min(ay,min(by,cy)) || y>max(ay,max(by,cy)))return false;
   const int32_t s1=(int32_t)(x-ax)*(by-ay)-(int32_t)(y-ay)*(bx-ax);
   const int32_t s2=(int32_t)(x-bx)*(cy-by)-(int32_t)(y-by)*(cx-bx);
   const int32_t s3=(int32_t)(x-cx)*(ay-cy)-(int32_t)(y-cy)*(ax-cx);
@@ -91,6 +94,9 @@ static bool triangle(int x,int y,int ax,int ay,int bx,int by,int cx,int cy){
 }
 static bool quadrilateral(int x,int y,
                           int ax,int ay,int bx,int by,int cx,int cy,int dx,int dy){
+  // Early AABB clipping saves most wing geometry tests per LCD pixel.
+  if(x<min(min(ax,bx),min(cx,dx)) || x>max(max(ax,bx),max(cx,dx)) ||
+     y<min(min(ay,by),min(cy,dy)) || y>max(max(ay,by),max(cy,dy)))return false;
   return triangle(x,y,ax,ay,bx,by,cx,cy) ||
          triangle(x,y,ax,ay,cx,cy,dx,dy);
 }
@@ -374,8 +380,8 @@ void MascotMode::tick(const Settings& s,bool dedicated){
         roamStartMs_=now;
         phaseUntilMs_=now+(uint32_t)s.mascot.roamSec*1000UL;
         mood_=(mood_+1u+(speechSerial_%3u))%5u;
-        // Coprime stride and a small variable step avoid a looping screensaver.
-        motionVariant_=(uint8_t)((motionVariant_+7u+(speechSerial_%5u))%20u);
+        // Coprime stride 7 visits ALL 20 distinct moves before any repeat.
+        motionVariant_=(uint8_t)((motionVariant_+7u)%20u);
         painted_=false;prevX_=-1;nextAnimationMs_=0;
       }else{
         phase_=SPEAK;
