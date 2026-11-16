@@ -248,6 +248,8 @@ static PlanePose flightPose(uint32_t frame,uint8_t pattern,bool mini) {
     default:p.shiftX=d/3;p.shiftY=b/3;p.bank=a/2;p.yaw=c/2; // victory dance
   }
   p.scale=(int16_t)constrain((int)p.scale,289,339);
+  p.shiftX=(int16_t)constrain((int)p.shiftX,-8,8);
+  p.shiftY=(int16_t)constrain((int)p.shiftY,-18,18);
   // Precompute reciprocals ONCE per frame (not for every LCD pixel).
   p.invX=(int16_t)(16777216L/((int32_t)p.scale*(256+p.yaw)));
   p.invY=(int16_t)(65536L/p.scale);
@@ -275,6 +277,9 @@ static void drawSpriteDelta(Arduino_GFX* gfx,
   static uint16_t tile[240*kTileRows];
   const PlanePose freshPose=flightPose(frame,pattern,mini);
   const PlanePose oldPose=flightPose(oldFrame,pattern,mini);
+  // Convert the palette once per frame, not for every one of 40,000+ pixels.
+  uint16_t palette[14];
+  for(uint8_t i=0;i<14;i++)palette[i]=mascotColor(i,bg);
   const int rx=mini?40:109,ry=mini?30:78;
   const int minX=max(0,min(x-rx,oldX>=0?oldX-rx:x-rx));
   const int maxX=min(239,max(x+rx,oldX>=0?oldX+rx:x+rx));
@@ -293,11 +298,11 @@ static void drawSpriteDelta(Arduino_GFX* gfx,
         const uint8_t stale=oldX>=0?
             spriteAt(px,py,oldX,oldY,oldFrame,oldMood,serial,oldPose):0;
         changed|=fresh!=stale;
-        tile[ty*width+col]=mascotColor(fresh,bg);
+        tile[ty*width+col]=palette[fresh<14?fresh:0];
       }
     }
     if(changed)gfx->draw16bitRGBBitmap(minX,top,tile,width,height);
-    if((top&15)==0)yield();
+    if(((top-minY)&15)==0)yield();
   }
 }
 
