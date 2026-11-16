@@ -89,6 +89,7 @@ struct UsageSettings {
 struct ClockSettings {
   String   tz;            // IANA display name, e.g. "Europe/Rome" (UI round-trip)
   String   tzPosix;       // POSIX TZ rule the device feeds SNTP
+  uint8_t  face;         // 0 digital, 1 analog, 2 dashboard, 3 retro
   String   lang;          // device language code (en, pt, es, fr, de, it); picks the names theme clocks show
   bool     nightEnabled;  // dim/blank on a nightly schedule
   uint16_t nightStartMin; // minutes since local midnight (0..1439)
@@ -232,7 +233,7 @@ struct Settings {
 
   // --- Carousel (mode == MODE_CAROUSEL): dwell + which features rotate ---
   uint16_t carouselSec;
-  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme, carouselAlerts;
+  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme, carouselAlerts, carouselClock;
 
   // --- Shared HTTP / display ---
   uint16_t httpTimeout; // ms
