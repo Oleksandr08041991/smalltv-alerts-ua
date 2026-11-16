@@ -1,4 +1,4 @@
-// Animated aviation friend: 15 s speech, 60 s roaming Tamagotchi.
+// Animated aviation friend: 60 s speech, 30 s roaming Tamagotchi.
 // Rule-driven mood and gestures, no online AI model or extra framebuffer.
 #pragma once
 #include "Mode.h"
@@ -13,6 +13,7 @@ public:
     painted_=false;
     prevX_=-1;
     nextAnimationMs_=0;
+    carouselActive_=false;
   }
   void service(const Settings& s) override;
   void tick(const Settings& s,bool dedicated);
@@ -26,6 +27,11 @@ private:
   void drawRoaming(const Settings& s);
   void drawBigCharacter(int cx,int cy,uint32_t frame);
   bool painted_=false, active_=false, selected_=false, dedicated_=false;
+  bool carouselActive_=false;
+  uint32_t carouselQuoteUntilMs_=0;
+  uint32_t prevFrame_=0,prevSmallFrame_=0;
+  uint8_t prevMood_=0,prevSmallMood_=0;
+  int16_t prevSmallX_=-1,prevSmallY_=-1;
   Phase phase_=SPEAK;
   uint32_t phaseUntilMs_=0, roamStartMs_=0;
   uint32_t nextPopupMs_=0, untilMs_=0, nextAnimationMs_=0;
