@@ -252,6 +252,12 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   <div class="card"><h2>Авіадруг — мікро-ШІ</h2>
    <p class="hint">Анімований маленький дрон: моргає, ворушить крильцями, рухає ротом, міняє настрій. Комікс-булька містить фразу, а під нею — автора.</p>
    <div class="chk"><input type="checkbox" id="mascotEnabled"><label>Увімкнути авіадруга та фрази поверх годинника</label></div>
+   <div class="row">
+    <div><label>Показ фрази (сек)</label>
+     <input type="number" id="mascotSpeechSec" min="10" max="300" step="5" value="60"></div>
+    <div><label>Рухи героя (сек)</label>
+     <input type="number" id="mascotRoamSec" min="5" max="180" step="5" value="30"></div>
+   </div>
    <div class="row"><div><label>Фрази поверх годинника кожні (хв)</label>
     <input type="number" id="mascotIntervalMin" min="5" max="240"></div>
     <div><label>Тематика</label>
@@ -261,7 +267,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <option value="2">Загальна мотивація</option>
      </select></div></div>
    <p class="hint">100 українських фраз: 5 коротких рядків з української літератури, 25 адаптованих висловів за мотивами Бенджаміна Франкліна та 70 авторських. Різні жести й настрій навіть для повторів. Добірка локально змінюється щомісяця; нові тексти надходитимуть із наступними оновленнями прошивки.</p>
-   <p class="hint">У режимі «Авіадруг»: 15 секунд великі фрази в комікс-бульці → 60 секунд великий герой мандрує по краях екрана, моргає і грається → нова фраза. Початок повітряної тривоги має пріоритет.</p>
+   <p class="hint">У режимі «Авіадруг»: фраза → прогулянка героя → наступна фраза, за вибраними інтервалами. У каруселі показуються тільки фрази без прогулянок; кожна нова поява сторінки приносить нову фразу. Повітряна тривога завжди має пріоритет.</p>
   </div>
  </section>
 
@@ -646,6 +652,8 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false); sc('carouselClock',c.carouselClock===true); sc('carouselMascot',c.carouselMascot===true);
  // Aviation mascot preferences.
  sc('mascotEnabled',mc.enabled!==false);sv('mascotIntervalMin',mc.intervalMin||30);sv('mascotFocus',mc.focus||0);
+ sv('mascotSpeechSec',mc.speechSec!=null?mc.speechSec:60);
+ sv('mascotRoamSec',mc.roamSec!=null?mc.roamSec:30);
  // Air Alerts settings. The token itself is intentionally never received.
  sc('alertsEnabled',al.enabled!==false);sc('alertsNotify',al.notify!==false);
  var uids=$('alertsUid');
@@ -818,7 +826,10 @@ function collect(){
  }
  // Aviation mascot slice
  if($('mascot'))o.mascot={enabled:gc('mascotEnabled'),
-   intervalMin:parseInt(gv('mascotIntervalMin'))||30,focus:parseInt(gv('mascotFocus'))||0};
+   intervalMin:parseInt(gv('mascotIntervalMin'))||30,
+   speechSec:numIn(gv('mascotSpeechSec'),60,10,300),
+   roamSec:numIn(gv('mascotRoamSec'),30,5,180),
+   focus:parseInt(gv('mascotFocus'))||0};
  // Air Alerts slice: an empty token field keeps the saved secret.
  if($('alerts')){
   var aa={enabled:gc('alertsEnabled'),notify:gc('alertsNotify'),uid:parseInt(gv('alertsUid'))||14,
