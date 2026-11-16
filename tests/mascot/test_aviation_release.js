@@ -10,16 +10,23 @@ assert(phrases.includes('Леся Українка')&&phrases.includes('Іван
 assert(phrases.includes('Франклін • переказ'),'Franklin paraphrases must be identified as such');
 assert(phrases.includes('Оригінальна фраза'),'Original text must not get literary attribution');
 const mascot=read('src/features/mascot/MascotMode.cpp');
-const head=mascot.split('void MascotMode::drawCharacter(')[0];
-const character=mascot.split('void MascotMode::drawSmallCharacter(')[1].split('void MascotMode::drawBigCharacter(')[0];
-assert(!character.includes('fillScreen('),'Animation must not blank the screen');
-assert(character.includes('mouthOpen')&&character.includes('blink')&&character.includes('wing'),'Missing animated facial/wing parts');
+const renderer=mascot.split('static uint8_t mascotPixel(')[1].split('static uint16_t mascotColor(')[0];
+assert(renderer.includes('blink') && renderer.includes('flap') && renderer.includes('grin'), 'Animated eyes, wings and smile missing');
+const delta=mascot.split('static void drawSpriteDelta(')[1].split('} // namespace')[0];
+assert(!delta.includes('fillScreen(') && !delta.includes('fillRect('), 'Walking must update only changed pixels without erasing rectangles');
+assert(mascot.includes('drawSpriteDelta('), 'Sprite delta-rendering missing');
 assert(mascot.includes('month=now.tm_mon+1')&&mascot.includes('mood_'),'Contextual gesture switching missing');
 assert(mascot.includes('intervalMin*60000UL'),'Popup interval not configurable');
-assert(mascot.includes('kRoamMs=60000UL'),'Tamagotchi must roam for one minute between phrases');
-assert(mascot.includes('kSpeechMs=15000UL'),'Speech duration must be 15 seconds');
+assert(mascot.includes('s.mascot.speechSec*1000UL'), 'Quote duration must come from persisted settings');
+assert(mascot.includes('s.mascot.roamSec*1000UL'), 'Roaming duration must come from persisted settings');
+const mascotSettings=read('src/Settings.cpp');
+assert(mascotSettings.includes('speechSec=60;roamSec=30'), 'Default durations must be 60s/30s');
+assert(mascotSettings.includes('o["speechSec"]=speechSec') && mascotSettings.includes('o["roamSec"]=roamSec'), 'Must save both durations');
+assert(mascotSettings.includes('speechSec=constrain(') && mascotSettings.includes('roamSec=constrain('), 'Must validate both durations');
+assert(mascot.includes('if(s.mode==MODE_CAROUSEL)') && mascot.includes('carouselQuoteUntilMs_'), 'Carousel must have a distinct timed quote state');
+assert(mascot.includes('carouselQuoteUntilMs_=now+(uint32_t)s.mascot.speechSec*1000UL'), 'Carousel quote interval should be configurable');
 assert(mascot.includes('phase_==ROAM')&&mascot.includes('drawRoaming('),'Mascot dedicated mode must have roaming phase');
-assert(mascot.includes('drawBigCharacter(')&&mascot.includes('prevX_-70'),'Roaming sprite must be large and partially repainted');
+assert(mascot.includes('drawBigCharacter(')&&mascot.includes('spriteAt('),'Roaming sprite must draw upgraded aviation character');
 assert(mascot.includes('wrapText(quote,scale,lines)')&&mascot.includes('uint8_t scale=3'),'Speech text should start at enlarged scale');
 const map=read('src/features/alerts/AlertMap.cpp');
 assert(map.includes('fillScreen(C_BLACK)'),'Map background must be black');
@@ -37,6 +44,10 @@ const platformio=read('platformio.ini');
 for(const feat of ['WITH_HA=0','WITH_RADAR=0','WITH_USAGE=0','WITH_TICKER=0'])
   assert(platformio.includes(feat),feat+' not disabled');
 const webui=read('src/webui.html');
-for(const id of ['mascotEnabled','mascotIntervalMin','mascotFocus','clockFace'])
+for(const id of ['mascotEnabled','mascotIntervalMin','mascotFocus','mascotSpeechSec','mascotRoamSec','clockFace'])
   assert(webui.includes('id="'+id+'"'),id+' web input missing');
-console.log('100-phrase aviation mascot, map, altimeter, OTA and web UI regression checks passed.');
+const alerts=read('src/features/alerts/AlertsMode.cpp');
+assert(alerts.includes('overlayAlert_?C_RED:C_GREEN'), 'Start and all-clear notifications need red/green frames');
+assert(alerts.includes('120,2,col'), 'Start and all-clear notifications need matching text colors');
+assert(mascot.includes('const uint8_t authorSize=') && mascot.includes('p.author,136,authorSize'), 'Authors should be legible beneath comic quotes');
+console.log('100-phrase aviation mascot, configurable timings, carousel, anti-flicker, alert overlays and OTA checks passed.');
