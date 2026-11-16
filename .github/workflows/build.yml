@@ -208,6 +208,11 @@ jobs:
       - name: Test firmware upload memory check
         run: sh tests/update/run.sh
 
+      - name: Test aviation mascot and air-alerts display refresh
+        run: |
+          node tests/mascot/test_aviation_release.js
+          node tests/alerts/test_display_refresh.js
+
       - name: Test crash record labels and boot decisions
         run: |
           c++ -std=c++11 -Wall -Wextra -Werror -g -Isrc tests/test_crash_record.cpp -o /tmp/smalltv-crash-tests
