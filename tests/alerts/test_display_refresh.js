@@ -16,8 +16,10 @@ assert(alerts.includes('if(overlayDrawnAt_)return;'), 'Static overlay must paint
 assert(!alerts.includes('millis()-lastRenderMs_'), 'Map must not repaint every N seconds');
 assert(alerts.includes('memcmp(oldStatuses,oblasts_'), 'Map redraw must depend on real API changes');
 assert(alerts.includes('paintedFresh_!=fresh(s)'), 'Stale data must still trigger a grey map');
-assert(map.includes('nearestRegion('), 'Map must render 27 color-coded territories');
+assert(map.includes('#include "OblastGeometry.h"'), 'Map must use the actual oblast region geometry');
 assert(map.includes('alertMapDraw('), 'Map renderer missing');
 assert(map.includes('if(fullFrame)'), 'Map must initialize frame only on entry');
-assert(map.includes('gfx->drawFastHLine(runStart,y,x-runStart,color)'), 'Map uses row runs, not per-pixel SPI fills');
+assert(map.includes('gfx->drawFastHLine(x,y,length,color)'), 'Map uses region run segments, not per-pixel SPI fills');
+assert(map.includes('gfx->fillScreen(C_WHITE)'), 'Map background must be white');
+assert(map.includes("case 'N':return gfxTint(0xF7BE)"), 'No-alert oblasts must be pale, not green');
 console.log('Display anti-flicker and map checks passed.');
