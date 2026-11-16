@@ -1060,7 +1060,7 @@ function haClearScreens(){if(!confirm('Clear all HA screens on the device and on
 var otaRelease=null;
 var otaApi='https://api.github.com/repos/Oleksandr08041991/smalltv-alerts-ua/releases/latest';
 function otaVersion(v){
- var m=String(v||'').match(/(\\d+)\\.(\\d+)\\.(\\d+)/);
+ var m=String(v||'').match(/(\d+)\.(\d+)\.(\d+)/);
  return m?([+m[1],+m[2],+m[3]]):[0,0,0];
 }
 function otaNewer(a,b){
@@ -1070,7 +1070,7 @@ function otaNewer(a,b){
 }
 function otaInstalled(){
  var t=(($('fwVer')&&$('fwVer').textContent)||'').trim();
- return (t.match(/\\d+\\.\\d+\\.\\d+/)||[])[0] || (C&&C.version)||'';
+ return (t.match(/\d+\.\d+\.\d+/)||[])[0] || (C&&C.version)||'';
 }
 function otaError(message){
  $('ghMsg').textContent='Помилка OTA: '+message;
@@ -1085,7 +1085,7 @@ function checkUpdate(){
  fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('GitHub API HTTP '+r.status);return r.json()})
  .then(function(release){
-  if(!/^v\\d+\\.\\d+\\.\\d+$/.test(release.tag_name||''))throw Error('Некоректний номер релізу');
+  if(!/^v\d+\.\d+\.\d+$/.test(release.tag_name||''))throw Error('Некоректний номер релізу');
   var asset=(release.assets||[]).find(function(a){return a.name==='smalltv-mod-firmware.bin'});
   if(!asset||!(asset.size>300000))throw Error('Не знайдено правильний ESP8266 .bin');
   var current=otaInstalled(),tag=release.tag_name;
