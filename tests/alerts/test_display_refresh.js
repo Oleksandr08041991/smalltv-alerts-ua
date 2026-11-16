@@ -20,6 +20,6 @@ assert(map.includes('#include "OblastGeometry.h"'), 'Map must use the actual obl
 assert(map.includes('alertMapDraw('), 'Map renderer missing');
 assert(map.includes('if(fullFrame)'), 'Map must initialize frame only on entry');
 assert(map.includes('gfx->drawFastHLine(x,y,length,color)'), 'Map uses region run segments, not per-pixel SPI fills');
-assert(map.includes('gfx->fillScreen(C_WHITE)'), 'Map background must be white');
-assert(map.includes("case 'N':return gfxTint(0xF7BE)"), 'No-alert oblasts must be pale, not green');
+assert(map.includes('gfx->fillScreen(C_BLACK)'), 'Map background must be black');
+assert(map.includes("case 'N':return C_WHITE"), 'No-alert oblasts must be white, not green or beige');
 console.log('Display anti-flicker and map checks passed.');
