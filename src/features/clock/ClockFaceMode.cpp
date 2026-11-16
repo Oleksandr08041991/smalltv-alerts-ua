@@ -138,6 +138,7 @@ void ClockFaceMode::updateTime(const Settings& s,const tm& t,
 void ClockFaceMode::service(const Settings& s){
   tm t{};
   if(!clockNow(t)){
+    if(lastSecond_>=0)dirty_=true; // enter sync screen after a running clock
     if(dirty_){
       Arduino_GFX* gfx=gfxDev();
       if(gfx){
@@ -146,6 +147,8 @@ void ClockFaceMode::service(const Settings& s){
         else gfxDrawCentered("TIME SYNC",100,2,C_YELLOW);
       }
       dirty_=false;
+      lastFace_=255; // restore the complete face once NTP becomes valid
+      lastSecond_=-1;
     }
     return;
   }
