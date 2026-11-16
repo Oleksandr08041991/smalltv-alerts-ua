@@ -185,7 +185,7 @@ static inline uint8_t spriteAt(int screenX,int screenY,int cx,int cy,
   if(cx<0)return 0;
   const int dx=screenX-cx,dy=screenY-cy;
   // Half-to-two-thirds size on the talking card, full size when roaming.
-  return mini?mascotPixel(dx*3/2,dy*3/2,frame,mood,serial)
+  return mini?mascotPixel(dx*2,dy*2,frame,mood,serial)
              :mascotPixel(dx,dy,frame,mood,serial);
 }
 // Batch consecutive differing pixels into horizontal monochrome palette runs.
@@ -202,7 +202,7 @@ static void drawSpriteDelta(Arduino_GFX* gfx,
   if(!gfx)return;
   constexpr int kTileRows=4;
   static uint16_t tile[240*kTileRows];
-  const int rx=mini?53:79,ry=mini?35:53;
+  const int rx=mini?40:79,ry=mini?27:53;
   const int minX=max(0,min(x-rx,oldX>=0?oldX-rx:x-rx));
   const int maxX=min(239,max(x+rx,oldX>=0?oldX+rx:x+rx));
   const int minY=max(mini?173:22,min(y-ry,oldX>=0?oldY-ry:y-ry));
@@ -387,12 +387,12 @@ void MascotMode::drawRoaming(const Settings& s){
   if(nextAnimationMs_ && (int32_t)(now-nextAnimationMs_)<0)return;
   nextAnimationMs_=now+160UL; // ~6 FPS, buffered LCD transfers
   const uint32_t frame=(now-roamStartMs_)/160UL;
-  const uint32_t dist=((now-roamStartMs_)/190UL*2UL)%360UL;
-  int x=81,y=77;
-  if(dist<78UL)x+=dist;
-  else if(dist<180UL){x=159;y+=(int)(dist-78UL);}
-  else if(dist<258UL){x=159-(int)(dist-180UL);y=179;}
-  else {x=81;y=179-(int)(dist-258UL);}
+  const uint32_t dist=((now-roamStartMs_)/190UL*2UL)%336UL;
+  int x=81,y=75;
+  if(dist<78UL)x+=(int)dist;
+  else if(dist<168UL){x=159;y+=(int)(dist-78UL);}
+  else if(dist<246UL){x=159-(int)(dist-168UL);y=165;}
+  else {x=81;y=165-(int)(dist-246UL);}
   if(mood_==2 && (frame%10u)<3u)y-=2; // occasional happy hop
   drawBigCharacter(x,y,frame);
 }
