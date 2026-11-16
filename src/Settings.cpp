@@ -129,6 +129,40 @@ void TickerSettings::fromJson(JsonObjectConst o) {
 #endif // WITH_TICKER
 
 // ===========================================================================
+// Air Alerts slice
+// ===========================================================================
+void AlertsSettings::setDefaults() {
+  enabled = true;
+  uid = 14;              // Kyiv Oblast
+  label = "KYIV REGION";
+  token = "";
+  pollSec = 60;
+}
+void AlertsSettings::toJson(JsonObject o, bool includeSecrets) const {
+  o["enabled"] = enabled;
+  o["uid"] = uid;
+  o["label"] = label;
+  o["pollSec"] = pollSec;
+  o["tokenSet"] = token.length() > 0;
+  if (includeSecrets) o["token"] = token;
+}
+void AlertsSettings::fromJson(JsonObjectConst o) {
+  if (o["enabled"].is<bool>()) enabled = o["enabled"];
+  if (o["uid"].is<int>()) uid = constrain((int)o["uid"], 1, 999);
+  if (o["pollSec"].is<int>()) pollSec = constrain((int)o["pollSec"], 30, 600);
+  if (o["label"].is<const char*>()) {
+    String v = o["label"].as<String>();
+    v.trim();
+    if (v.length() <= 26) label = v;
+  }
+  if (o["clearToken"].is<bool>() && o["clearToken"].as<bool>()) token = "";
+  if (o["token"].is<const char*>()) {
+    String v = o["token"].as<String>(); v.trim();
+    if (v.length() && v.length() <= 256) token = v;  // empty keeps stored secret
+  }
+}
+
+// ===========================================================================
 // Usage slice
 // ===========================================================================
 void UsageSettings::setDefaults() {
@@ -508,6 +542,7 @@ void Settings::setDefaults() {
   themeId = "";
   carouselSec = DEFAULT_CAROUSEL_SEC;
   carouselTicker = (bool)WITH_TICKER;
+  carouselAlerts = true;
   carouselUsage = carouselRadar = carouselHa = true;
   carouselTheme = false;   // opt in: needs an installed theme, else the slot shows an error
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
@@ -520,6 +555,7 @@ void Settings::setDefaults() {
 #if WITH_TICKER
   ticker.setDefaults();
 #endif
+  alerts.setDefaults();
   usage.setDefaults();
   radar.setDefaults();
   ha.setDefaults();
@@ -602,13 +638,15 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
                             : (s.mode == MODE_RADAR)    ? "radar"
                             : (s.mode == MODE_USAGE)    ? "usage"
                             : (s.mode == MODE_HA)       ? "ha"
-                            : (s.mode == MODE_CAROUSEL) ? "carousel" : "stocks";
+                            : (s.mode == MODE_CAROUSEL) ? "carousel"
+                            : (s.mode == MODE_ALERTS)   ? "alerts" : "stocks";
   root["carouselSec"]       = s.carouselSec;
   root["carouselTicker"]    = s.carouselTicker;
   root["carouselUsage"]     = s.carouselUsage;
   root["carouselRadar"]     = s.carouselRadar;
   root["carouselHa"]        = s.carouselHa;
   root["carouselTheme"]     = s.carouselTheme;
+  root["carouselAlerts"]    = s.carouselAlerts;
   root["httpTimeout"]       = s.httpTimeout;
   root["brightness"]        = s.brightness;
   root["autoBrightness"]    = s.autoBrightness;
@@ -619,6 +657,7 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
 #if WITH_TICKER
   s.ticker.toJson(root["ticker"].to<JsonObject>());
 #endif
+  s.alerts.toJson(root["alerts"].to<JsonObject>(), includeSecrets);
   s.usage.toJson(root["usage"].to<JsonObject>());
   s.radar.toJson(root["radar"].to<JsonObject>());
   s.ha.toJson(root["ha"].to<JsonObject>(), includeSecrets);
@@ -680,6 +719,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
            : m.equalsIgnoreCase("usage")    ? MODE_USAGE
            : m.equalsIgnoreCase("ha")       ? MODE_HA
            : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL
+           : m.equalsIgnoreCase("alerts")   ? MODE_ALERTS
            : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_USAGE)
            : s.mode;   // empty or unknown: a save that names no mode keeps the stored one
   }
@@ -698,6 +738,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   if (root["carouselRadar"].is<bool>())   s.carouselRadar = root["carouselRadar"];
   if (root["carouselHa"].is<bool>())      s.carouselHa = root["carouselHa"];
   if (root["carouselTheme"].is<bool>())   s.carouselTheme = root["carouselTheme"];
+  if (root["carouselAlerts"].is<bool>())  s.carouselAlerts = root["carouselAlerts"];
 
   if (root["httpTimeout"].is<int>())        s.httpTimeout = constrain((int)root["httpTimeout"], 1000, 20000);
   if (root["brightness"].is<int>())         s.brightness = constrain((int)root["brightness"], 0, 100);
@@ -712,6 +753,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   JsonObjectConst t = root["ticker"].is<JsonObjectConst>() ? root["ticker"].as<JsonObjectConst>() : root;
   s.ticker.fromJson(t);
 #endif
+  if (root["alerts"].is<JsonObjectConst>()) s.alerts.fromJson(root["alerts"].as<JsonObjectConst>());
   JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
   s.usage.fromJson(u);
   // Radar has no legacy flat layout; only apply when its nested object is present.
