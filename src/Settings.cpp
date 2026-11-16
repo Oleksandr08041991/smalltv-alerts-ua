@@ -9,6 +9,7 @@ static const char* CONFIG_PATH = "/config.json";
 // the filesystem, known without building the settings document again.
 static size_t g_storedSize = 0;
 
+#if WITH_TICKER
 // ===========================================================================
 // Ticker slice
 // ===========================================================================
@@ -124,6 +125,8 @@ void TickerSettings::fromJson(JsonObjectConst o) {
     }
   }
 }
+
+#endif // WITH_TICKER
 
 // ===========================================================================
 // Usage slice
@@ -504,7 +507,8 @@ void Settings::setDefaults() {
   mode = DEFAULT_MODE;
   themeId = "";
   carouselSec = DEFAULT_CAROUSEL_SEC;
-  carouselTicker = carouselUsage = carouselRadar = carouselHa = true;
+  carouselTicker = (bool)WITH_TICKER;
+  carouselUsage = carouselRadar = carouselHa = true;
   carouselTheme = false;   // opt in: needs an installed theme, else the slot shows an error
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
 
@@ -513,7 +517,9 @@ void Settings::setDefaults() {
   backlightInverted = TFT_BL_DEFAULT_INVERTED;
   rotation = 0;
 
+#if WITH_TICKER
   ticker.setDefaults();
+#endif
   usage.setDefaults();
   radar.setDefaults();
   ha.setDefaults();
@@ -610,7 +616,9 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   root["rotation"]          = s.rotation;
 
   // Feature slices
+#if WITH_TICKER
   s.ticker.toJson(root["ticker"].to<JsonObject>());
+#endif
   s.usage.toJson(root["usage"].to<JsonObject>());
   s.radar.toJson(root["radar"].to<JsonObject>());
   s.ha.toJson(root["ha"].to<JsonObject>(), includeSecrets);
@@ -672,7 +680,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
            : m.equalsIgnoreCase("usage")    ? MODE_USAGE
            : m.equalsIgnoreCase("ha")       ? MODE_HA
            : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL
-           : m.equalsIgnoreCase("stocks")   ? MODE_STOCKS
+           : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_USAGE)
            : s.mode;   // empty or unknown: a save that names no mode keeps the stored one
   }
   if (root["themeId"].is<const char*>()) {
@@ -700,8 +708,10 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   // Feature slices: prefer the nested object; fall back to the top level so a
   // legacy flat config.json (or a legacy POST) still applies. The old shared
   // "pollSec" thus seeds both ticker and usage cadence on first upgrade.
+#if WITH_TICKER
   JsonObjectConst t = root["ticker"].is<JsonObjectConst>() ? root["ticker"].as<JsonObjectConst>() : root;
   s.ticker.fromJson(t);
+#endif
   JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
   s.usage.fromJson(u);
   // Radar has no legacy flat layout; only apply when its nested object is present.
