@@ -8,8 +8,10 @@
 
 MascotMode g_mascotMode;
 namespace {
-constexpr uint32_t kSpeechMs=15000UL;
-constexpr uint32_t kRoamMs=60000UL;
+constexpr uint32_t kSpeechMs=60000UL;
+constexpr uint32_t kPopupMs=15000UL;
+constexpr uint32_t kCarouselQuoteMs=12000UL;
+constexpr uint32_t kRoamMs=30000UL;
 static uint16_t navy(){return gfxTint(0x112B);}
 static uint16_t sky(){return gfxTint(0x24B8);}
 static uint16_t warm(){return gfxTint(0xFDB0);}
@@ -64,8 +66,10 @@ static void drawQuote(Arduino_GFX* gfx,const char* quote) {
 void MascotMode::begin(const Settings& s){
   (void)s;
   painted_=false;active_=false;selected_=false;dedicated_=false;
+  carouselActive_=false;carouselQuoteUntilMs_=0;
   phase_=SPEAK;phaseUntilMs_=0;roamStartMs_=0;
   speechSerial_=0;prevX_=-1;prevY_=-1;
+  prevSmallX_=-1;prevSmallY_=-1;prevFrame_=0;prevSmallFrame_=0;
   nextPopupMs_=millis()+120000UL;
   nextAnimationMs_=0;
 }
@@ -93,15 +97,25 @@ void MascotMode::choose(const Settings& s){
   }
   selectedIndex_=index;
   mood_=(uint8_t)((seed/7+hour+speechSerial_)%5);
-  selected_=true;painted_=false;prevX_=-1;nextAnimationMs_=0;
+  selected_=true;painted_=false;prevX_=-1;prevSmallX_=-1;nextAnimationMs_=0;
 }
 void MascotMode::tick(const Settings& s,bool dedicated){
+  const uint32_t now=millis();
   if(!s.mascot.enabled){
     active_=false;
     dedicated_=false;
+    carouselActive_=false;
     return;
   }
-  const uint32_t now=millis();
+  // A carousel page is NOT a dedicated Tamagotchi session.
+  // Earlier the global tick(false) and service tick(true) fought every loop:
+  // dedicated_ flipped false/true at ~5ms and chose a new phrase each time.
+  // Let service() handle one stable timed quote while its carousel page is up.
+  if(s.mode==MODE_CAROUSEL){
+    active_=false; dedicated_=false;
+    return;
+  }
+  carouselActive_=false;
   if(dedicated){
     active_=false;
     if(!dedicated_){
@@ -124,7 +138,7 @@ void MascotMode::tick(const Settings& s,bool dedicated){
     }
     return;
   }
-  if(dedicated_) {
+  if(dedicated_){
     dedicated_=false;
     painted_=false;
     prevX_=-1;
@@ -137,9 +151,9 @@ void MascotMode::tick(const Settings& s,bool dedicated){
   if((int32_t)(now-nextPopupMs_)>=0){
     choose(s);
     active_=true;
-    untilMs_=now+kSpeechMs;
-    // Clock pop-ups use the separate configured interval. The dedicated
-    // mascot screen always uses a precise 60-second roaming phase.
+    untilMs_=now+kPopupMs;
+    // On a normal clock the motivation overlay is brief and optional.
+    // The 60s/30s cycle belongs only to the dedicated Aviafriend mode.
     nextPopupMs_=now+(uint32_t)s.mascot.intervalMin*60000UL;
   }
 }
@@ -288,7 +302,19 @@ void MascotMode::service(const Settings& s){
     }
     return;
   }
-  tick(s,true);
+  if(s.mode==MODE_CAROUSEL){
+    // A carousel slot keeps changing quotes but never enters the 30s roaming
+    // phase. Crucially: do not call tick(s,true) here!
+    const uint32_t now=millis();
+    if(!carouselActive_ || (int32_t)(now-carouselQuoteUntilMs_)>=0){
+      carouselActive_=true;
+      choose(s);
+      carouselQuoteUntilMs_=now+kCarouselQuoteMs;
+    }
+    renderOverlay(s);
+    return;
+  }
+  // main loop already advances the standalone session via tick(s,true).
   if(phase_==ROAM)drawRoaming(s);
   else renderOverlay(s);
 }
