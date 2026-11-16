@@ -65,7 +65,15 @@ void ClockFaceMode::render(const Settings& s,const tm& t) {
 void ClockFaceMode::service(const Settings& s){
   tm t{};
   if(!clockNow(t)) {
-    if(dirty_){gfxMessage(s.clock.lang=="uk"?"CLOCK":"CLOCK","Syncing time...",C_YELLOW);dirty_=false;}
+    if(dirty_){
+      Arduino_GFX* gfx=gfxDev();
+      if(gfx){
+        gfx->fillScreen(C_BLACK);
+        if(s.clock.lang=="uk") ukrtext::centered(gfx,"СИНХРОНІЗАЦІЯ",100,2,C_YELLOW);
+        else gfxDrawCentered("TIME SYNC",100,2,C_YELLOW);
+      }
+      dirty_=false;
+    }
     return;
   }
   if(dirty_ || t.tm_sec!=lastSecond_ || s.clock.face!=lastFace_) {
