@@ -49,6 +49,8 @@ jobs:
           PY
       - name: Check display redraw regressions
         run: node tests/alerts/test_display_refresh.js
+      - name: Check aviation mascot, white oblast map and OTA
+        run: node tests/mascot/test_aviation_release.js
       - name: Build SmallTV Ultra firmware and one-time loader
         run: pio run -e smalltv -e smalltv_loader
       - name: Verify OTA firmware size and stage files
