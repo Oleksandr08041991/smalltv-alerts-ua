@@ -1058,7 +1058,7 @@ function haClearScreens(){if(!confirm('Clear all HA screens on the device and on
 // This is a *real* firmware update over Wi-Fi, not a .bin file chooser.
 // The browser and device must have LAN access and browser internet access.
 var otaRelease=null;
-var otaApi='https://api.github.com/repos/Oleksandr08041991/smalltv-alerts-ua/releases/latest';
+var otaApi='https://api.github.com/repos/Oleksandr08041991/smalltv-alerts-ua/contents/latest.json?ref=ota';
 function otaVersion(v){
  var m=String(v||'').match(/(\d+)\.(\d+)\.(\d+)/);
  return m?([+m[1],+m[2],+m[3]]):[0,0,0];
@@ -1081,22 +1081,31 @@ function checkUpdate(){
  otaRelease=null;
  $('ghUpBtn').disabled=true;
  $('chkBtn').disabled=true;
- $('ghMsg').textContent='Перевіряю останній GitHub Release через браузер...';
+ $('ghMsg').textContent='Перевіряю останню OTA-версію через GitHub...';
  return fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('GitHub API HTTP '+r.status);return r.json()})
- .then(function(release){
-  if(!/^v\d+\.\d+\.\d+$/.test(release.tag_name||''))throw Error('Некоректний номер релізу');
-  var asset=(release.assets||[]).find(function(a){return a.name==='smalltv-mod-firmware.bin'});
-  if(!asset||!(asset.size>300000))throw Error('Не знайдено правильний ESP8266 .bin');
-  var current=otaInstalled(),tag=release.tag_name;
+ .then(function(meta){
+  // GitHub's Contents API normally returns the file base64 encoded.
+  // A proxy with a raw media-type may instead return JSON directly.
+  var manifest=meta;
+  if(meta && meta.encoding==='base64' && meta.content){
+   manifest=JSON.parse(atob(meta.content.replace(/\\s/g,'')));
+  }
+  if(!manifest || !/^v\\d+\\.\\d+\\.\\d+$/.test(manifest.version||''))
+    throw Error('Некоректний OTA-маніфест');
+  if(manifest.file !== 'firmware/'+manifest.version+'.bin')
+    throw Error('OTA-файл не відповідає версії');
+  if(!(manifest.size>300000) || !/^[a-f0-9]{64}$/.test(manifest.sha256||''))
+    throw Error('Відсутній розмір або контрольна сума прошивки');
+  var current=otaInstalled(),tag=manifest.version;
   if(!otaNewer(tag,current)){
    $('ghMsg').textContent='Установлена актуальна версія '+(current||tag)+'.';
    return;
   }
-  otaRelease={tag:tag,size:asset.size,digest:asset.digest||''};
-  $('ghMsg').textContent='Доступна '+tag+' (встановлено '+(current||'невідомо')+'). Оновлення завантажить браузер: ESP8266 не витрачатиме RAM на TLS.';
+  otaRelease={tag:tag,size:manifest.size,digest:'sha256:'+manifest.sha256};
+  $('ghMsg').textContent='Доступна '+tag+' (встановлено '+(current||'невідомо')+'). Оновлення завантажує браузер через Wi-Fi без TLS на ESP8266.';
   $('ghUpBtn').disabled=false;
- }).catch(function(e){otaError(e.message+'. Перевір інтернет на пристрої, де відкрито браузер.')})
+ }).catch(function(e){otaError(e.message+'. Перевір інтернет на телефоні або комп\'ютері.')})
  .then(function(){$('chkBtn').disabled=false});
 }
 async function otaDownloadFirmware(release){
