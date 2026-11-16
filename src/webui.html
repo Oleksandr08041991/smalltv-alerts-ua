@@ -454,11 +454,11 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   <div class="card"><h2>Оновлення з GitHub</h2>
    <div class="muted">Installed: <b id="fwVer">-</b></div>
    <div style="margin-top:10px">
-    <button class="btn sec" onclick="checkUpdate()" id="chkBtn">Check for latest</button>
+    <button class="btn sec" onclick="checkUpdate()" id="chkBtn">Перевірити оновлення</button>
     <button class="btn" style="margin-left:8px" onclick="selfUpdate()" id="ghUpBtn" disabled>Оновити зараз</button>
    </div>
    <div id="ghMsg" class="muted" style="margin-top:8px"></div>
-   <small class="hint">Pulls the newest release straight from <a id="repoLink" href="https://github.com/giovi321/smalltv-mod/releases" target="_blank">the GitHub repo</a>. HTTPS OTA is tight on the ESP8266; if it fails, use the manual upload below.</small>
+   <small class="hint">Оновлення по Wi-Fi без завантаження .bin вручну. Браузер перевіряє <a id="repoLink" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua/releases" target="_blank" rel="noopener">GitHub Releases</a>, завантажує образ і передає його в GeekMagic. На комп’ютері або телефоні потрібен інтернет і доступ до локальної мережі пристрою. Якщо CDN тимчасово недоступний, скористайся ручним оновленням нижче.</small>
   </div>
   <div class="card"><h2>Ручне оновлення (OTA)</h2>
    <input id="fw" type="file" accept=".bin">
@@ -490,7 +490,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 
 <div style="text-align:center;padding:0 0 16px"><button class="btn" onclick="saveAll()">Зберегти налаштування</button></div>
 <div style="text-align:center;padding:0 0 24px;font-size:12px">
- <a id="footRepo" href="https://github.com/giovi321/smalltv-mod" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: giovi321/smalltv-mod</a>
+ <a id="footRepo" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: SmallTV Air Alerts UA</a>
  <span id="footVer" class="muted"></span>
 </div>
 <div id="toast" class="toast"></div>
