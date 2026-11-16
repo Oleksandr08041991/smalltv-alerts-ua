@@ -25,8 +25,8 @@ static uint16_t stateColor(char state,bool usable){
   }
 }
 static uint16_t regionColor(char c,bool fresh){return stateColor(c,fresh);}
-static void lineRuns(Arduino_GFX* gfx,int y,const uint8_t* arr,int first,int stop,uint16_t color){
-  for(int i=first;i+1<stop;i+=2)gfx->drawFastHLine(arr[i],y,arr[i+1],color);
+static void lineRuns(Arduino_GFX* gfx,int y,int first,int stop,uint16_t color){
+  for(int i=first;i+1<stop;i+=2)gfx->drawFastHLine(geoBorder(i),y,geoBorder(i+1),color);
 }
 void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
                   bool fresh,uint16_t selectedUid,bool fullFrame){
@@ -47,8 +47,8 @@ void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
   // No framebuffer and no full-screen blank between API updates.
   for(int y=kGeoStartY;y<=kGeoEndY;y++){
     int row=y-kGeoStartY;
-    for(int i=kRows[row];i<kRows[row+1];i+=3){
-      uint8_t x=kRuns[i],length=kRuns[i+1],id=kRuns[i+2];
+    for(int i=geoRow(row);i<geoRow(row+1);i+=3){
+      uint8_t x=geoRun(i),length=geoRun(i+1),id=geoRun(i+2);
       uint16_t color=regionColor(statuses[id],fresh);
       gfx->drawFastHLine(x,y,length,color);
     }
@@ -57,7 +57,7 @@ void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
   // Thin, neutral regional borders, including coastline.
   for(int y=kGeoStartY;y<=kGeoEndY;y++){
     int row=y-kGeoStartY;
-    lineRuns(gfx,y,kBorders,kBordersRows[row],kBordersRows[row+1],border);
+    lineRuns(gfx,y,geoBorderRow(row),geoBorderRow(row+1),border);
   }
   // Location indicator uses only the selected region UID, not invented coordinates.
   const int region=alertMapRegionIndex(selectedUid);
