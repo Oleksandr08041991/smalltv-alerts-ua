@@ -1050,30 +1050,116 @@ function haClearScreens(){if(!confirm('Clear all HA screens on the device and on
  j('/api/ha/clear',{method:'POST'}).then(function(r){
   toast('Cleared '+r.cleared+' screen(s)'+(r.broker?'':' — device only, broker not connected'));})}
 
-// GitHub self-update
-function checkUpdate(){$('ghMsg').textContent='Checking GitHub...';$('chkBtn').disabled=true;
- j('/api/checkupdate').then(function(u){$('chkBtn').disabled=false;
-  if(!u.ok){$('ghMsg').textContent='Check failed: '+(u.error||'unknown');return}
-  if(u.newer){$('ghMsg').innerHTML='Version <b>'+u.latest+'</b> is available (installed '+u.current+').';$('ghUpBtn').disabled=false}
-  else{$('ghMsg').textContent='Up to date ('+u.current+').';$('ghUpBtn').disabled=true}
- }).catch(function(){$('chkBtn').disabled=false;$('ghMsg').textContent='Check failed'})}
-function selfUpdate(){if(!confirm('Download and flash the latest release from GitHub? The device reboots if it succeeds.'))return;
+// Browser-assisted GitHub OTA for the ESP8266 (SmallTV Ultra).
+// The ESP8266 cannot reliably fit GitHub HTTPS TLS buffers into 80KB of RAM.
+// Instead the user's browser fetches verified public release metadata + the
+// exact release's firmware from our own CORS-enabled GitHub CDN branch, then
+// POSTs it over the LAN to the existing secure same-origin /update handler.
+// This is a *real* firmware update over Wi-Fi, not a .bin file chooser.
+// The browser and device must have LAN access and browser internet access.
+var otaRelease=null;
+var otaApi='https://api.github.com/repos/Oleksandr08041991/smalltv-alerts-ua/releases/latest';
+function otaVersion(v){
+ var m=String(v||'').match(/(\\d+)\\.(\\d+)\\.(\\d+)/);
+ return m?([+m[1],+m[2],+m[3]]):[0,0,0];
+}
+function otaNewer(a,b){
+ var x=otaVersion(a),y=otaVersion(b);
+ for(var i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i]}
+ return false;
+}
+function otaInstalled(){
+ var t=(($('fwVer')&&$('fwVer').textContent)||'').trim();
+ return (t.match(/\\d+\\.\\d+\\.\\d+/)||[])[0] || (C&&C.version)||'';
+}
+function otaError(message){
+ $('ghMsg').textContent='Помилка OTA: '+message;
+ $('chkBtn').disabled=false;
+ $('ghUpBtn').disabled=true;
+}
+function checkUpdate(){
+ otaRelease=null;
+ $('ghUpBtn').disabled=true;
+ $('chkBtn').disabled=true;
+ $('ghMsg').textContent='Перевіряю останній GitHub Release через браузер...';
+ fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
+ .then(function(r){if(!r.ok)throw Error('GitHub API HTTP '+r.status);return r.json()})
+ .then(function(release){
+  if(!/^v\\d+\\.\\d+\\.\\d+$/.test(release.tag_name||''))throw Error('Некоректний номер релізу');
+  var asset=(release.assets||[]).find(function(a){return a.name==='smalltv-mod-firmware.bin'});
+  if(!asset||!(asset.size>300000))throw Error('Не знайдено правильний ESP8266 .bin');
+  var current=otaInstalled(),tag=release.tag_name;
+  if(!otaNewer(tag,current)){
+   $('ghMsg').textContent='Установлена актуальна версія '+(current||tag)+'.';
+   return;
+  }
+  otaRelease={tag:tag,size:asset.size,digest:asset.digest||''};
+  $('ghMsg').textContent='Доступна '+tag+' (встановлено '+(current||'невідомо')+'). Оновлення завантажить браузер: ESP8266 не витрачатиме RAM на TLS.';
+  $('ghUpBtn').disabled=false;
+ }).catch(function(e){otaError(e.message+'. Перевір інтернет на пристрої, де відкрито браузер.')})
+ .then(function(){$('chkBtn').disabled=false});
+}
+async function otaDownloadFirmware(release){
+ var repo='Oleksandr08041991/smalltv-alerts-ua';
+ var suffix='/firmware/'+encodeURIComponent(release.tag)+'.bin';
+ var urls=[
+  'https://cdn.jsdelivr.net/gh/'+repo+'@ota'+suffix,
+  'https://raw.githubusercontent.com/'+repo+'/ota'+suffix
+ ];
+ var last='';
+ for(var i=0;i<urls.length;i++){
+  try{
+   var r=await fetch(urls[i],{cache:'no-store'});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   var buffer=await r.arrayBuffer();
+   if(buffer.byteLength!==release.size)throw Error('Розмір образу не збігається з GitHub Release');
+   var bytes=new Uint8Array(buffer);
+   if(bytes[0]!==0xE9)throw Error('Некоректний ESP8266 firmware.bin');
+   // SHA256 is available only on HTTPS/secure browser origins. On http://
+   // device IP it may be unavailable; TLS download, asset size and image
+   // header are verified, and Update.end(true) validates flashed image.
+   if(window.crypto && window.crypto.subtle && release.digest &&
+      release.digest.indexOf('sha256:')===0){
+    var raw=await crypto.subtle.digest('SHA-256',buffer);
+    var hash=Array.from(new Uint8Array(raw)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+    if(hash!==release.digest.slice(7))throw Error('SHA256 не збігається з релізом');
+   }
+   return buffer;
+  }catch(e){last=e.message}
+ }
+ throw Error('Не вдалося завантажити образ із CDN: '+last+'. Резерв: ручне OTA з GitHub Releases.');
+}
+function selfUpdate(){
+ if(!otaRelease){otaError('Спочатку натисни Check Update');return}
+ var target=otaRelease;
+ if(!confirm('Встановити '+target.tag+' по Wi-Fi? Браузер завантажить .bin і передасть його GeekMagic. Живлення не відключати.'))return;
  $('ghUpBtn').disabled=true;$('chkBtn').disabled=true;
- $('ghMsg').textContent='Downloading and flashing... this can take a couple of minutes and the device may reboot twice.';
- // Installed version, read synchronously from the already-loaded status so the
- // poller below can recognise success (new version) without racing a fetch.
- var cur=(($('fwVer').textContent||'').trim().split(' ').pop())||'';
- j('/api/selfupdate',{method:'POST'}).then(function(){
-  var n=0;var t=setInterval(function(){n++;
-   j('/api/status').then(function(s){
-    if(cur&&s.version&&s.version!==cur){clearInterval(t);$('ghMsg').textContent='Updated to '+s.version+'.';$('chkBtn').disabled=false;return}
-    var m=s.updateMsg||'';
-    if(m&&m!=='starting...'&&m!=='updating...'){clearInterval(t);$('ghMsg').textContent='Update failed: '+m;$('chkBtn').disabled=false}
-   }).catch(function(){});
-   if(n>100)clearInterval(t);
-  },3000);
- }).catch(function(){$('ghMsg').textContent='Could not start update';$('chkBtn').disabled=false})}
-
+ $('ghMsg').textContent='Завантаження '+target.tag+' з GitHub CDN...';
+ otaDownloadFirmware(target).then(function(buffer){
+  $('ghMsg').textContent='Прошивка отримана ('+buffer.byteLength+' байтів). Передаю на GeekMagic...';
+  var form=new FormData();
+  form.append('firmware',new Blob([buffer],{type:'application/octet-stream'}),'smalltv-mod-firmware.bin');
+  var req=new XMLHttpRequest();
+  req.open('POST','/update',true);
+  req.timeout=120000;
+  req.withCredentials=true;
+  req.upload.onprogress=function(ev){
+   if(ev.lengthComputable)
+    $('ghMsg').textContent='Прошивання через Wi-Fi: '+Math.round(100*ev.loaded/ev.total)+'%. Не вимикай живлення.';
+  };
+  req.onload=function(){
+   if(req.status===200&&req.responseText.trim()==='OK'){
+    $('ghMsg').textContent='Образ '+target.tag+' записано. GeekMagic перезавантажується...';
+    setTimeout(function(){location.reload()},8500);
+   }else{
+    otaError('Пристрій відхилив файл: HTTP '+req.status+' '+String(req.responseText||'').slice(0,160));
+   }
+  };
+  req.onerror=function(){otaError('Втрачено зв\'язок із пристроєм. Якщо GeekMagic перезавантажився, перевір номер версії.')};
+  req.ontimeout=function(){otaError('Передавання вичерпало час очікування. Перевір пристрій.')};
+  req.send(form);
+ }).catch(function(e){otaError(e.message)});
+}
 // settings backup
 function importCfg(){var f=$('cfgFile').files[0];if(!f){toast('Pick a config .json first');return}
  var r=new FileReader();
