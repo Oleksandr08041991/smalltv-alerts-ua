@@ -54,7 +54,10 @@ void clockReapply(const Settings& s) {
       (s.mode == MODE_THEME || (s.mode == MODE_CAROUSEL && s.carouselTheme));
   const bool alertsOnScreen = (s.mode == MODE_ALERTS) ||
       (s.mode == MODE_CAROUSEL && s.carouselAlerts);
-  if (!s.clock.nightEnabled && !s.clock.sunEnabled && !wgNeedsClock(s) && !themeOnScreen && !alertsOnScreen) return;
+  const bool clockOnScreen = (s.mode == MODE_CLOCK) ||
+      (s.mode == MODE_CAROUSEL && s.carouselClock);
+  if (!s.clock.nightEnabled && !s.clock.sunEnabled && !wgNeedsClock(s) &&
+      !themeOnScreen && !alertsOnScreen && !clockOnScreen) return;
   if (!s_ntpStarted || s.clock.tzPosix != s_armedTz) clockBegin(s);
 }
 
