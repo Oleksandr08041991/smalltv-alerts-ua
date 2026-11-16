@@ -16,9 +16,9 @@
 #define FW_VERSION  "3.6.0"
 
 // Project / update references (shown in the web UI; used by the GitHub self-update)
-#define REPO_URL      "https://github.com/giovi321/smalltv-mod"
-#define REPO_OWNER    "giovi321"
-#define REPO_NAME     "smalltv-mod"
+#define REPO_URL      "https://github.com/Oleksandr08041991/smalltv-alerts-ua"
+#define REPO_OWNER    "Oleksandr08041991"
+#define REPO_NAME     "smalltv-alerts-ua"
 // Release asset the GitHub self-updater pulls, and the short variant name shown
 // in the web UI. One app image per target, plus a second one for the two boards
 // that ship a stripped or extended build of the same hardware: the ESP8266
@@ -142,7 +142,7 @@
 #define MODE_NOTIFY    4             // transient overlay: armed over HTTP, never persisted
 #define MODE_THEME     6             // declarative installed clock faces
 #define MODE_HA        5             // Home Assistant screens pushed over MQTT
-#define DEFAULT_MODE MODE_STOCKS
+#define DEFAULT_MODE (WITH_TICKER ? MODE_STOCKS : MODE_USAGE)
 #define DEFAULT_CAROUSEL_SEC 30      // per-mode dwell in carousel
 
 // ---------------------------------------------------------------------------
