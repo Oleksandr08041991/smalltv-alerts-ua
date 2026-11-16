@@ -14,7 +14,7 @@ static const uint16_t kUids[27] = {
 // including Crimea and both separately monitored cities, remain represented.
 // Avoid PROGMEM sub-byte reads: the previous ESP8266 exception was triggered
 // in the Cyrillic renderer on Flash-backed unaligned data.
-static const uint8_t kCentres[27][2] = {
+static uint8_t kCentres[27][2] = {
   {142,186},{44,72},{88,117},{165,124},{195,146},{93,79},
   {30,141},{172,153},{52,125},{119,89},{115,96},{132,134},
   {211,119},{43,99},{128,159},{97,171},{148,102},{65,76},
@@ -24,7 +24,7 @@ static const uint8_t kCentres[27][2] = {
 
 // Country outline is schematic (not an administrative/geodetic map).
 // Larger map with clear southern peninsula and distinct eastern/western contours.
-static const uint8_t kOutline[][2] = {
+static uint8_t kOutline[][2] = {
   {11,86},{20,77},{30,64},{42,61},{53,66},{65,58},{83,64},
   {96,57},{109,57},{125,51},{140,46},{153,49},{161,56},
   {176,58},{194,68},{204,70},{216,79},{225,88},
