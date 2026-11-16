@@ -157,13 +157,15 @@ void AlertsMode::renderOverlay(const Settings& s){
   if(overlayDrawnAt_)return;
   overlayDrawnAt_=millis()|1UL;
   Arduino_GFX* gfx=gfxDev(); if(!gfx)return;
+  // The alert has a RED frame and matching RED text.
+  // The all-clear has a GREEN frame and matching GREEN text.
   uint16_t col=overlayAlert_?C_RED:C_GREEN;
   gfx->fillScreen(C_BLACK);
   gfx->fillRoundRect(8,16,224,194,16,col);
-  gfx->fillRoundRect(13,21,214,184,12,C_BLACK);
+  gfx->fillRoundRect(14,22,212,182,12,C_BLACK);
   ukrtext::centered(gfx,overlayAlert_?"УВАГА":"ВІДБІЙ",42,3,col);
-  ukrtext::centered(gfx,overlayAlert_?"ПОВІТРЯНА":"ТРИВОГУ",96,2,C_WHITE);
-  ukrtext::centered(gfx,overlayAlert_?"ТРИВОГА":"СКАСОВАНО",120,2,C_WHITE);
+  ukrtext::centered(gfx,overlayAlert_?"ПОВІТРЯНА":"ТРИВОГУ",96,2,col);
+  ukrtext::centered(gfx,overlayAlert_?"ТРИВОГА":"СКАСОВАНО",120,2,col);
   // Region nickname may be Cyrillic (rendered in uppercase).
   ukrtext::centered(gfx,s.alerts.label.c_str(),168,1,C_GRAY);
   ukrtext::centered(gfx,"ПЕРЕВІРТЕ СПОВІЩЕННЯ",220,1,C_YELLOW);
