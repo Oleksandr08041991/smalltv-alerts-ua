@@ -147,7 +147,11 @@ static uint8_t appEffectiveBrightness() {
   BrightnessInputs in = {};
   // A button wake press briefly lifts the screen to the manual level so a touch
   // reveals it even when night mode has dimmed or blanked the backlight.
-  in.wake = g_btnWakeUntil && millis() < g_btnWakeUntil;
+  in.wake = (g_btnWakeUntil && millis() < g_btnWakeUntil)
+#if WITH_ALERTS
+       || g_alertsMode.overlayActive()
+#endif
+       ;
   in.sliderPct = g_settings.brightness;
   in.nightActive = clockNightActive();
   in.nightPct = g_settings.clock.nightLevel;
