@@ -230,7 +230,9 @@ struct Settings {
   uint8_t  rotation;          // 0..3 screen orientation
 
   // --- Feature slices ---
+#if WITH_TICKER
   TickerSettings  ticker;
+#endif
   UsageSettings   usage;
   RadarSettings   radar;
   HaSettings      ha;        // MQTT broker for HA screens
