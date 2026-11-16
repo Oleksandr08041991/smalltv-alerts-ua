@@ -124,11 +124,17 @@ bool AlertsMode::fetch(const Settings& s) {
 }
 void AlertsMode::poll(const Settings& s) {
   if(!s.alerts.enabled||!s.alerts.token.length()){
-    state_='?';failed_=true;
-    error_=s.alerts.enabled?"введіть API-токен":"моніторинг вимкнено";
-    needRender_=true;return;
+    const char* reason=s.alerts.enabled?"введіть API-токен":"моніторинг вимкнено";
+    // The clock/map is serviced every ~5 ms. Repaint only on a change,
+    // not on every tick when there is no token.
+    if(state_!='?' || !failed_ || strcmp(error_,reason)!=0) needRender_=true;
+    state_='?';failed_=true;error_=reason;
+    return;
   }
-  if(!netConnected()){if(!failed_)needRender_=true;failed_=true;error_="немає Wi-Fi";return;}
+  if(!netConnected()){
+    if(!failed_ || strcmp(error_,"немає Wi-Fi")!=0) needRender_=true;
+    failed_=true;error_="немає Wi-Fi";return;
+  }
   if(nextPollMs_&&(int32_t)(millis()-nextPollMs_)<0)return;
   nextPollMs_=millis()+(uint32_t)s.alerts.pollSec*1000UL;
   if(fetch(s)){lastOkMs_=millis()|1UL;failed_=false;}
