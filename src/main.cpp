@@ -18,6 +18,7 @@
 #include "OtaUpdate.h"
 #include "Mode.h"
 #include "Clock.h"
+#include "features/clock/ClockFaceMode.h"
 #include "SunTimes.h"
 #include "WgClient.h"
 #if WITH_THEME
@@ -49,6 +50,7 @@
 // The compiled-in features, in display order. main.cpp holds no per-feature
 // state of its own — each mode owns its fetch/render/dirty tracking.
 static DisplayMode* kModes[] = {
+  &g_clockFaceMode,
 #if WITH_ALERTS
   &g_alertsMode,
 #endif
@@ -79,6 +81,7 @@ static bool     g_carPaused = false;   // button paused the auto-rotation (stays
 
 static bool carouselHas(const Settings& s, const DisplayMode* m) {
   switch (m->modeConst()) {
+    case MODE_CLOCK:  return s.carouselClock;
     case MODE_STOCKS: return s.carouselTicker;
     case MODE_USAGE:  return s.carouselUsage;
     case MODE_ALERTS: return s.carouselAlerts;
