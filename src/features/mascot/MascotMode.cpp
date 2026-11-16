@@ -339,12 +339,19 @@ void MascotMode::drawSpeechFrame(const Settings& s){
   gfx->drawLine(51,154,68,172,sky());
   gfx->drawLine(68,172,80,154,sky());
   ukrtext::centered(gfx,"ДРУЖНІЙ ПІЛОТ",16,1,sky());
-  const motivation::Phrase& p=motivation::get(selectedIndex_);
-  drawQuote(gfx,p.text);
-  // Keep author attribution visibly legible: 2x Ukrainian font, blue on
-  // white comic bubble. "Original" lines are labelled, not falsely credited.
-  const uint8_t authorSize=ukrtext::textWidth(p.author,2)<=216?2:1;
-  ukrtext::centered(gfx,p.author,136,authorSize,gfxTint(0x2539));
+  char quote[160],author[72];
+  // Phrase table lives in Flash: always copy into aligned RAM first.
+  motivation::copy(selectedIndex_,quote,sizeof(quote),author,sizeof(author));
+  drawQuote(gfx,quote);
+  // Display ACTUAL author at a legible size; adaptations are honestly marked
+  // in a separate, smaller subtitle rather than squeezing the author to 1x.
+  String credit(author);
+  const int marker=credit.indexOf(" • ");
+  const bool adapted=marker>=0;
+  if(adapted)credit.remove(marker);
+  uint8_t authorSize=ukrtext::textWidth(credit.c_str(),2)<=216?2:1;
+  ukrtext::centered(gfx,credit.c_str(),126,authorSize,gfxTint(0x2539));
+  if(adapted)ukrtext::centered(gfx,"ПЕРЕКАЗ",143,1,C_GRAY);
   gfx->drawFastHLine(14,229,210,sky());
   painted_=true;nextAnimationMs_=0;prevSmallX_=-1;
 }
