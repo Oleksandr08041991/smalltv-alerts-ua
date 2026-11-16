@@ -25,7 +25,7 @@ assert(mascot.includes('const int x=120+pose.shiftX,y=122+pose.shiftY') &&
   'The full-size airplane must be enlarged, centered and clipped safely');
 assert(mascot.includes('switch(pattern%20u)'),'Motion selector must use 20 flight presets');
 for(let id=0;id<19;id++)
-  assert(new RegExp('case\\\\s*'+id+':').test(mascot), 'Missing flight preset '+id);
+  assert(new RegExp('case\\s*'+id+':').test(mascot), 'Missing flight preset '+id);
 assert(mascot.includes('motionVariant_=(uint8_t)(') &&
   mascot.includes('%20u);'), 'A new flight routine must be chosen after each phrase');
 assert(mascot.includes('Wing thickness/underside') &&
