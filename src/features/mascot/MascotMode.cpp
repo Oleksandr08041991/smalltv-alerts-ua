@@ -61,6 +61,151 @@ static void drawQuote(Arduino_GFX* gfx,const char* quote) {
   for(uint8_t i=0;i<n && i<5;i++)
     ukrtext::centered(gfx,lines[i].c_str(),first+i*step,scale,navy());
 }
+
+// The mascot is composited by pixels, without a full-frame buffer.
+// Old and new poses are analytically sampled, and only DIFFERENT color runs
+// are sent over SPI. This eliminates the black erase rectangle between frames
+// on the slow ST7789 display and needs under 100 bytes of scratch memory.
+static inline bool disc(int x,int y,int cx,int cy,int radius) {
+  const int dx=x-cx,dy=y-cy;return dx*dx+dy*dy<=radius*radius;
+}
+static inline bool ellipse(int x,int y,int cx,int cy,int rx,int ry){
+  const int dx=x-cx,dy=y-cy;
+  return (int32_t)dx*dx*ry*ry+(int32_t)dy*dy*rx*rx <= (int32_t)rx*rx*ry*ry;
+}
+static inline bool rounded(int x,int y,int left,int top,int width,int height,int r){
+  if(x<left||x>=left+width||y<top||y>=top+height)return false;
+  const int px=max(left+r,min(x,left+width-r-1));
+  const int py=max(top+r,min(y,top+height-r-1));
+  const int dx=x-px,dy=y-py;
+  return dx*dx+dy*dy<=r*r;
+}
+// 0=transparent, 1=body border, 2=blue wing, 3=white shell, 4=navy,
+// 5=gold, 6=grey, 7=cyan highlight, 8=pale-blue face, 9=coral cheek,
+// 10=yellow star, 11=teal. Each frame has two independent rotor/wing poses.
+static uint8_t mascotPixel(int x,int y,uint32_t frame,uint8_t mood,uint16_t speech){
+  if(x<-72||x>72||y<-44||y>45)return 0;
+  const int flap=((frame+mood)%6u<3u)?3:-3;
+  const bool blink=((frame/2u+speech)%29u)==0u;
+  const bool grin=((frame+mood)%8u)<6u;
+  uint8_t c=0;
+  // Twin little sparkles appear on the happy moods, behind the silhouette.
+  if((mood==1||mood==3)&&frame%5u<3u){
+    if(disc(x,y,62,-35,3)||disc(x,y,-61,31,2))c=10;
+  }
+  // Soft aviation exhaust / attitude fins near the rear.
+  if(rounded(x,y,-54,10,25,13,5)||rounded(x,y,29,10,25,13,5))c=1;
+  if(rounded(x,y,-50,12,20,8,4)||rounded(x,y,30,12,20,8,4))c=7;
+
+  // Twin winglets. Dark aerodynamic outline + bright upper wing surfaces.
+  if(rounded(x,y,-68,-22-flap,40,17,7)||
+     rounded(x,y,28,-22+flap,40,17,7))c=1;
+  if(rounded(x,y,-65,-20-flap,37,12,6)||
+     rounded(x,y,28,-20+flap,37,12,6))c=2;
+  if(rounded(x,y,-60,-18-flap,19,4,2)||
+     rounded(x,y,41,-18+flap,19,4,2))c=7;
+  // Propeller struts and two-blade rotor discs.
+  if((abs(x+52)<=2 && y>=-37-flap && y<=-25-flap)||
+     (abs(x-52)<=2 && y>=-37+flap && y<=-25+flap))c=6;
+  if((y>=-39-flap&&y<=-37-flap&&abs(x+52)<=17)||
+     (y>=-39+flap&&y<=-37+flap&&abs(x-52)<=17))c=7;
+  if((y==-38-flap && abs(x+52)<=8)||
+     (y==-38+flap && abs(x-52)<=8))c=3;
+
+  // Rounded fuselage has a navy rim, a sky-blue frame and pearl-white face.
+  if(rounded(x,y,-40,-33,80,77,24))c=1;
+  if(rounded(x,y,-38,-31,76,73,22))c=2;
+  if(rounded(x,y,-35,-27,70,65,20))c=3;
+  if(ellipse(x,y,0,-9,31,20))c=8;
+  if(ellipse(x,y,-19,-17,8,5)||ellipse(x,y,19,-17,8,5))c=3;
+  // Bright aircraft visor, central bolt and eyebrow accents.
+  if(rounded(x,y,-23,-34,46,11,5))c=1;
+  if(rounded(x,y,-21,-33,42,8,4))c=7;
+  if(rounded(x,y,-13,-30,26,3,1))c=3;
+  if(disc(x,y,0,-31,3))c=5;
+  if(y>=-14&&y<=-12&&((x>=-26&&x<=-11)||(x>=11&&x<=26)))c=2;
+
+  if(blink){
+    if(y>=-4&&y<=-2&&((x>=-23&&x<=-12)||(x>=12&&x<=23)))c=4;
+  }else{
+    if(ellipse(x,y,-17,-4,6,8)||ellipse(x,y,17,-4,6,8))c=4;
+    if(disc(x,y,-19,-7,2)||disc(x,y,15,-7,2))c=3;
+  }
+  if(ellipse(x,y,-27,12,5,3)||ellipse(x,y,27,12,5,3))c=9;
+  // Mouth reacts even when walking; larger opening on an excited mood.
+  if(grin){
+    if(y>=12&&y<=19){
+      const int dy=y-12;
+      if(abs(x)<=10&&y>=15+abs(x)/5)c=4;
+      else if(abs(x)>=9&&abs(x)<=13&&dy>=abs(x)-9&&dy<=7)c=4;
+    }
+  }else if(ellipse(x,y,0,17,12,7)){
+    c=4;
+    if(y>=20&&ellipse(x,y,0,22,8,3))c=9;
+  }
+  // Belly insignia, aviation badge and tiny boots.
+  if(rounded(x,y,-15,32,30,7,3))c=5;
+  if(rounded(x,y,-21,36,14,6,2)||rounded(x,y,7,36,14,6,2))c=1;
+  if(rounded(x,y,-19,37,10,4,2)||rounded(x,y,9,37,10,4,2))c=7;
+  return c;
+}
+static uint16_t mascotColor(uint8_t c,uint16_t background) {
+  switch(c){
+    case 0:return background;
+    case 1:return gfxTint(0x0948); // navy outline
+    case 2:return gfxTint(0x24B8); // aviation blue
+    case 3:return C_WHITE;
+    case 4:return gfxTint(0x112B);
+    case 5:return gfxTint(0xFDB0);
+    case 6:return C_GRAY;
+    case 7:return gfxTint(0x4E7F); // cyan highlight
+    case 8:return gfxTint(0xDEFF); // cockpit glass
+    case 9:return gfxTint(0xF2CC); // cheeks/tongue
+    case 10:return C_YELLOW;
+    default:return gfxTint(0x0555);
+  }
+}
+static inline uint8_t spriteAt(int screenX,int screenY,int cx,int cy,
+                               uint32_t frame,uint8_t mood,uint16_t serial,bool mini) {
+  if(cx<0)return 0;
+  const int dx=screenX-cx,dy=screenY-cy;
+  // Half-to-two-thirds size on the talking card, full size when roaming.
+  return mini?mascotPixel(dx*3/2,dy*3/2,frame,mood,serial)
+             :mascotPixel(dx,dy,frame,mood,serial);
+}
+// Batch consecutive differing pixels into horizontal monochrome palette runs.
+// No framebuffer, fillRect erase, screen flashing or 16-bit canvas allocation.
+static void drawSpriteDelta(Arduino_GFX* gfx,
+                            int x,int y,uint32_t frame,uint8_t mood,
+                            int oldX,int oldY,uint32_t oldFrame,uint8_t oldMood,
+                            uint16_t serial,bool mini,uint16_t bg) {
+  if(!gfx)return;
+  const int rx=mini?49:72,ry=mini?30:45;
+  const int minX=max(0,min(x-rx,oldX>=0?oldX-rx:x-rx));
+  const int maxX=min(239,max(x+rx,oldX>=0?oldX+rx:x+rx));
+  const int minY=max(mini?173:23,min(y-ry,oldX>=0?oldY-ry:y-ry));
+  const int maxY=min(mini?225:219,max(y+ry,oldX>=0?oldY+ry:y+ry));
+  uint16_t palette[11];
+  for(uint8_t i=0;i<11;i++)palette[i]=mascotColor(i,bg);
+  for(int row=minY;row<=maxY;row++){
+    int run=-1;uint8_t tone=0;
+    for(int px=minX;px<=maxX+1;px++){
+      uint8_t newer=0,older=0;
+      if(px<=maxX){
+        newer=spriteAt(px,row,x,y,frame,mood,serial,mini);
+        if(oldX>=0)older=spriteAt(px,row,oldX,oldY,oldFrame,oldMood,serial,mini);
+      }
+      if(px<=maxX && newer!=older && (run<0||newer==tone)){
+        if(run<0){run=px;tone=newer;}
+      }else{
+        if(run>=0){gfx->drawFastHLine(run,row,px-run,palette[tone]);run=-1;}
+        if(px<=maxX && newer!=older){run=px;tone=newer;}
+      }
+    }
+    if((row&15)==0)yield();
+  }
+}
+
 } // namespace
 
 void MascotMode::begin(const Settings& s){
@@ -172,87 +317,26 @@ void MascotMode::drawSpeechFrame(const Settings& s){
   drawQuote(gfx,p.text);
   ukrtext::centered(gfx,p.author,141,1,C_GRAY);
   gfx->drawFastHLine(14,229,210,sky());
-  painted_=true;nextAnimationMs_=0;
+  painted_=true;nextAnimationMs_=0;prevSmallX_=-1;
 }
 void MascotMode::drawSmallCharacter(const Settings& s){
   (void)s;
-  Arduino_GFX* gfx=gfxDev();if(!gfx)return;
-  gfx->fillRect(26,173,153,54,backdrop());
   const uint32_t frame=millis()/230UL;
-  const int bob=(int)((frame+mood_)%5)-2;
-  const int wing=((frame+mood_)%4<2)?6:0;
-  const bool blink=((frame+speechSerial_)%24)==0;
-  const bool mouthOpen=((frame+mood_)%3)!=0;
-  const int cx=94+bob,cy=202+((mood_==2&&(frame&1))?-3:0);
-  gfx->fillRoundRect(cx-36,cy-13-wing,20,8,3,sky());
-  gfx->fillRoundRect(cx+16,cy-13+wing,20,8,3,sky());
-  gfx->drawFastHLine(cx-47,cy-21-wing,24,C_GRAY);
-  gfx->drawFastHLine(cx+23,cy-21+wing,24,C_GRAY);
-  gfx->drawFastVLine(cx-35,cy-21-wing,8,C_GRAY);
-  gfx->drawFastVLine(cx+35,cy-21+wing,8,C_GRAY);
-  gfx->fillRoundRect(cx-23,cy-23,46,38,15,C_WHITE);
-  gfx->drawRoundRect(cx-23,cy-23,46,38,15,sky());
-  gfx->fillRoundRect(cx-12,cy-24,24,9,4,sky());
-  if(blink){
-    gfx->drawFastHLine(cx-13,cy-6,8,navy());
-    gfx->drawFastHLine(cx+5,cy-6,8,navy());
-  }else{
-    gfx->fillCircle(cx-9,cy-7,3,navy());
-    gfx->fillCircle(cx+9,cy-7,3,navy());
-    gfx->drawPixel(cx-10,cy-8,C_WHITE);
-    gfx->drawPixel(cx+8,cy-8,C_WHITE);
-  }
-  if(mouthOpen)gfx->fillRoundRect(cx-7,cy+2,14,8,4,warm());
-  else gfx->drawFastHLine(cx-6,cy+5,12,navy());
-  gfx->fillRect(cx-12,cy+16,24,4,warm());
-  if(mood_==1||mood_==4){
-    if(frame%2==0){
-      gfx->fillCircle(cx+52,cy-15,2,warm());
-      gfx->drawLine(cx+52,cy-22,cx+52,cy-25,warm());
-    }
-  }else if(mood_==2)gfx->fillCircle(cx-52,cy-17+(frame%3),2,C_YELLOW);
+  const int bob=(int)((frame+mood_)%5u)-2;
+  const int cx=94+bob,cy=198+((mood_==2&&(frame&1u))?-2:0);
+  drawSpriteDelta(gfxDev(),cx,cy,frame,mood_,prevSmallX_,prevSmallY_,
+                  prevSmallFrame_,prevSmallMood_,speechSerial_,true,backdrop());
+  prevSmallX_=cx;prevSmallY_=cy;
+  prevSmallFrame_=frame;prevSmallMood_=mood_;
 }
+// The enlarged sprite moves around a perimeter with NO black erase rectangle.
 // The larger mascot moves along a rectangle following the SCREEN PERIMETER.
 // Position is derived from elapsed time, not repeated accumulated increments,
 // so web requests do not freeze the animation timeline.
 void MascotMode::drawBigCharacter(int cx,int cy,uint32_t frame){
-  Arduino_GFX* gfx=gfxDev();if(!gfx)return;
-  const int flap=((frame+mood_)%4u<2u)?6:-2;
-  const bool blink=((frame/2+speechSerial_)%23u)==0u;
-  const bool grin=((frame+mood_)%8u)<6u;
-  const bool cheer=(mood_==1||mood_==3) && (frame%7u)<3u;
-  // Outer wings are 122px wide; central body is 74px vs 46px when speaking.
-  gfx->fillRoundRect(cx-62,cy-18-flap,30,13,5,sky());
-  gfx->fillRoundRect(cx+32,cy-18+flap,30,13,5,sky());
-  gfx->drawFastHLine(cx-68,cy-32-flap,32,C_GRAY);
-  gfx->drawFastHLine(cx+36,cy-32+flap,32,C_GRAY);
-  gfx->drawFastVLine(cx-51,cy-32-flap,11,C_GRAY);
-  gfx->drawFastVLine(cx+51,cy-32+flap,11,C_GRAY);
-  gfx->fillRoundRect(cx-37,cy-30,74,67,22,C_WHITE);
-  gfx->drawRoundRect(cx-37,cy-30,74,67,22,sky());
-  gfx->fillRoundRect(cx-20,cy-32,40,14,6,sky());
-  gfx->drawFastHLine(cx-16,cy-24,32,C_WHITE);
-  if(blink){
-    gfx->drawFastHLine(cx-23,cy-4,13,navy());
-    gfx->drawFastHLine(cx+10,cy-4,13,navy());
-  }else{
-    gfx->fillCircle(cx-17,cy-7,5,navy());
-    gfx->fillCircle(cx+17,cy-7,5,navy());
-    gfx->fillCircle(cx-18,cy-9,2,C_WHITE);
-    gfx->fillCircle(cx+16,cy-9,2,C_WHITE);
-  }
-  if(grin){
-    gfx->drawLine(cx-13,cy+13,cx-7,cy+19,navy());
-    gfx->drawFastHLine(cx-7,cy+19,14,navy());
-    gfx->drawLine(cx+7,cy+19,cx+13,cy+13,navy());
-  }else gfx->fillRoundRect(cx-11,cy+12,22,9,4,warm());
-  gfx->fillRoundRect(cx-15,cy+33,30,6,3,warm());
-  if(cheer){
-    gfx->fillCircle(cx+65,cy-30,3,C_YELLOW);
-    gfx->drawLine(cx+65,cy-38,cx+65,cy-42,C_YELLOW);
-  }else if(mood_==2&&frame%4u==0u){
-    gfx->fillCircle(cx-61,cy+23,3,warm());
-  }
+  drawSpriteDelta(gfxDev(),cx,cy,frame,mood_,prevX_,prevY_,
+                  prevFrame_,prevMood_,speechSerial_,false,C_BLACK);
+  prevX_=cx;prevY_=cy;prevFrame_=frame;prevMood_=mood_;
 }
 void MascotMode::drawRoaming(const Settings& s){
   (void)s;
@@ -260,7 +344,7 @@ void MascotMode::drawRoaming(const Settings& s){
   if(!painted_){
     gfx->fillScreen(C_BLACK);
     ukrtext::centered(gfx,"АВІАДРУГ",3,1,sky());
-    ukrtext::centered(gfx,"НОВА ФРАЗА ЗА ХВИЛИНУ",228,1,C_GRAY);
+    ukrtext::centered(gfx,"НАСТУПНА ФРАЗА ЗА 30 С",228,1,C_GRAY);
     painted_=true;prevX_=-1;nextAnimationMs_=0;
   }
   const uint32_t now=millis();
@@ -274,13 +358,7 @@ void MascotMode::drawRoaming(const Settings& s){
   else if(dist<294UL){x=166-(int)(dist-202UL);y=176;}
   else y=176-(int)(dist-294UL);
   if(mood_==2 && (frame%10u)<3u)y-=2; // occasional happy hop
-  if(prevX_>=0){
-    // Erase only the former sprite rectangle; never clear the whole screen
-    // on frame changes. Top/bottom captions are outside the sprite bounds.
-    gfx->fillRect(prevX_-70,prevY_-44,141,87,C_BLACK);
-  }
   drawBigCharacter(x,y,frame);
-  prevX_=x;prevY_=y;
 }
 void MascotMode::renderOverlay(const Settings& s){
   if(!selected_)choose(s);
