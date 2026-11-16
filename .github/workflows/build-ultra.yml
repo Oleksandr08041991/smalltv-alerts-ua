@@ -1,0 +1,49 @@
+name: Build SmallTV Ultra
+on:
+  push:
+    branches: [feature/air-alerts-slim]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  esp8266:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PlatformIO
+        run: python -m pip install platformio==6.1.19
+      - name: Generate web interface
+        run: |
+          python tools/gzip_webui.py
+          python tools/gzip_webui.py --check
+      - name: Build SmallTV Ultra firmware and one-time loader
+        run: pio run -e smalltv -e smalltv_loader
+      - name: Verify OTA firmware size and stage files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          slot=1044464
+          files={"smalltv-mod-firmware.bin":Path(".pio/build/smalltv/firmware.bin"),
+                 "smalltv-mod-loader.bin":Path(".pio/build/smalltv_loader/firmware.bin")}
+          out=Path("dist"); out.mkdir(exist_ok=True)
+          for name,path in files.items():
+              size=path.stat().st_size
+              free=slot-size
+              print(f"{name}: {size:,} bytes, free OTA slot: {free:,} bytes ({free/slot:.1%})")
+              if free < 8192:
+                  raise SystemExit(f"OTA slot headroom too low: {name}")
+              shutil.copy2(path,out/name)
+          PY
+      - name: Upload verified ESP8266 binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: smalltv-ultra-air-alerts
+          path: dist/*.bin
+          if-no-files-found: error
+          retention-days: 30
