@@ -451,14 +451,14 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 
  <!-- UPDATE -->
  <section id="update" class="tab">
-  <div class="card"><h2>Оновлення з GitHub</h2>
+  <div class="card"><h2>Оновлення по Wi-Fi (GitHub)</h2>
    <div class="muted">Installed: <b id="fwVer">-</b></div>
    <div style="margin-top:10px">
     <button class="btn sec" onclick="checkUpdate()" id="chkBtn">Перевірити оновлення</button>
     <button class="btn" style="margin-left:8px" onclick="selfUpdate()" id="ghUpBtn" disabled>Оновити зараз</button>
    </div>
    <div id="ghMsg" class="muted" style="margin-top:8px"></div>
-   <small class="hint">Оновлення по Wi-Fi без завантаження .bin вручну. Браузер перевіряє <a id="repoLink" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua/releases" target="_blank" rel="noopener">GitHub Releases</a>, завантажує образ і передає його в GeekMagic. На комп’ютері або телефоні потрібен інтернет і доступ до локальної мережі пристрою. Якщо CDN тимчасово недоступний, скористайся ручним оновленням нижче.</small>
+   <small class="hint">Оновлення по Wi-Fi без завантаження .bin вручну. Браузер перевіряє <a id="repoLink" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua/tree/ota" target="_blank" rel="noopener">GitHub OTA</a>, завантажує образ і передає його в GeekMagic. На комп’ютері або телефоні потрібен інтернет і доступ до локальної мережі пристрою. Якщо CDN тимчасово недоступний, скористайся ручним оновленням нижче.</small>
   </div>
   <div class="card"><h2>Ручне оновлення (OTA)</h2>
    <input id="fw" type="file" accept=".bin">
@@ -1136,7 +1136,7 @@ async function otaDownloadFirmware(release){
    return buffer;
   }catch(e){last=e.message}
  }
- throw Error('Не вдалося завантажити образ із CDN: '+last+'. Резерв: ручне OTA з GitHub Releases.');
+ throw Error('Не вдалося завантажити образ із CDN: '+last+'. Резерв: ручне OTA з гілки ota на GitHub.');
 }
 function selfUpdate(){
  if(!otaRelease){otaError('Спочатку натисни Check Update');return}
