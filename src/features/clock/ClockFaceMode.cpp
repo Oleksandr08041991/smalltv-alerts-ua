@@ -39,7 +39,11 @@ static void hands(Arduino_GFX* gfx,int hours,int minute,int second,
 static void drawDate(Arduino_GFX* gfx,const tm& t,int y){
   char date[24]; fmtDate(date,t);
   // The inset is intentionally bounded: no change to static borders/lines.
-  gfx->fillRect(12,y-2,216,23,C_BLACK);
+  // Keep every draw inside the 240-pixel panel; the lower dashboard date
+  // starts at y=220 and cannot safely request a 23px rectangle from y=218.
+  const int top=y-2;
+  const int height=(top+23>TFT_HEIGHT)?(TFT_HEIGHT-top):23;
+  gfx->fillRect(12,top,216,height,C_BLACK);
   ukrtext::centered(gfx,date,y,2,C_GRAY);
 }
 } // namespace
