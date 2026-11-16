@@ -147,7 +147,7 @@ void AlertsMode::render(const Settings& s) {
   }
   // Bottom badge updates without clearing any other part of the map.
   uint8_t size=ukrtext::textWidth(label,2)<=216?2:1;
-  ukrtext::centered(gfx,label,220,size,usable?colorFor(state_):C_YELLOW);
+  ukrtext::centered(gfx,label,224,size,usable?(state_=='R'?C_RED:(state_=='Y'||state_=='P')?C_YELLOW:C_WHITE):C_GRAY);
   paintedFresh_=usable;
   frameReady_=true;
 }
