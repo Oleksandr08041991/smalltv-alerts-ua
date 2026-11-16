@@ -25,10 +25,11 @@ jobs:
       # Publishing a GitHub Release is the explicit OTA deployment gate.
       # The tag must match the version compiled into the binary; never
       # release an image with another version under a misleading name.
-      - name: Check version matches release tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Check intended OTA release version matches built image
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.head_commit.message, 'release: v')
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           python - <<'PY'
           import os, pathlib, re
@@ -36,9 +37,15 @@ jobs:
           match = re.search(r'^#define\s+FW_VERSION\s+"(\d+\.\d+\.\d+)"', cfg, re.M)
           if not match: raise SystemExit("FW_VERSION is not x.y.z")
           expected = "v" + match.group(1)
-          if os.environ["RELEASE_TAG"] != expected:
-              raise SystemExit(f"Tag {os.environ['RELEASE_TAG']} != firmware {expected}")
-          print(f"Verified release tag {expected}")
+          if os.environ["RELEASE_REF"].startswith("refs/tags/v"):
+              tag = os.environ["RELEASE_REF"].removeprefix("refs/tags/")
+          else:
+              m = re.fullmatch(r"release: (v\d+\.\d+\.\d+)", os.environ["RELEASE_MESSAGE"].strip())
+              if not m: raise SystemExit("Expected a single release: vX.Y.Z commit subject")
+              tag = m.group(1)
+          if tag != expected:
+              raise SystemExit(f"Requested release {tag} differs from firmware {expected}")
+          print(f"Verified OTA release {expected}")
           PY
       - name: Check display redraw regressions
         run: node tests/alerts/test_display_refresh.js
@@ -73,7 +80,9 @@ jobs:
   # into an actual GitHub Release. The firmware's /releases/latest API looks
   # here (NOT at Actions artifacts). No release on ordinary branch pushes.
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # A deliberately named "release: vX.Y.Z" push promotes a verified
+    # branch build. Ordinary code changes only create test artifacts.
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release: v'))
     needs: esp8266
     runs-on: ubuntu-latest
     permissions:
@@ -88,12 +97,33 @@ jobs:
         run: |
           test -s dist/smalltv-mod-firmware.bin
           test -s dist/smalltv-mod-loader.bin
+      - name: Resolve release tag
+        id: release_tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python - <<'PY'
+          import os,re
+          ref=os.environ["RELEASE_REF"]
+          if ref.startswith("refs/tags/v"):
+              tag=ref.removeprefix("refs/tags/")
+          else:
+              m=re.fullmatch(r"release: (v\d+\.\d+\.\d+)",os.environ["RELEASE_MESSAGE"].strip())
+              if not m: raise SystemExit("Invalid explicit OTA release commit")
+              tag=m.group(1)
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+              f.write("tag="+tag+"\n")
+          print("Publishing",tag)
+          PY
       - name: Create release with firmware for in-device OTA
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: |
             dist/smalltv-mod-firmware.bin
             dist/smalltv-mod-loader.bin
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true
           generate_release_notes: true
           draft: false
