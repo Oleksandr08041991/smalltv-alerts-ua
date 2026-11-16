@@ -105,7 +105,7 @@ void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
   if(fullFrame){
     gfx->fillScreen(C_BLACK);
     gfx->fillRect(0,0,kMapW,42,gfxTint(0x0862));
-    ukrtext::centered(gfx,"МАПА ТРИВОГ",5,2,C_WHITE);
+    ukrtext::centered(gfx,"СХЕМА ТРИВОГ",5,2,C_WHITE);
     // Small compact legend: no large cards competing with the map.
     gfx->fillRoundRect(18,29,8,8,2,C_RED);
     ukrtext::drawAt(gfx,"ТРИВОГА",30,29,1,C_GRAY);
