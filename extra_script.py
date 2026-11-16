@@ -6,6 +6,12 @@ import subprocess
 # build-tool command lines, dropping args. This re-tokenizes and dispatches directly.
 PROJECT_DIR = env.subst("$PROJECT_DIR")
 
+# This fork edits webui.html directly. Keep the embedded gzip HTML in sync
+# for local PlatformIO builds (CI independently regenerates it, too).
+import sys
+subprocess.check_call([sys.executable, os.path.join(PROJECT_DIR, "tools", "gzip_webui.py")],
+                      cwd=PROJECT_DIR)
+
 
 def _tokenize(cmdline):
     # \"-escaped quotes (e.g. ESP8266's ARDUINO_BOARD_ID=\"esp12e\") must become a
