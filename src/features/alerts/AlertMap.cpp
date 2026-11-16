@@ -15,12 +15,12 @@ int alertMapRegionIndex(uint16_t uid){
   return -1;
 }
 static uint16_t stateColor(char state,bool usable){
-  if(!usable)return gfxTint(0xD69A); // stale = neutral grey
+  if(!usable)return gfxTint(0x73AE); // stale = neutral grey, never false safe
   switch(state){
     case 'R':return gfxTint(0xE3EB); // salmon red, alerts.in.ua-like
     case 'Y':return gfxTint(0xFEC0); // clear yellow
     case 'P':return gfxTint(0xFD80); // amber partial alert
-    case 'N':return gfxTint(0xF7BE); // pale beige, almost white
+    case 'N':return C_WHITE; // no alert: white oblast
     default:return gfxTint(0xD69A);
   }
 }
@@ -31,9 +31,9 @@ static void lineRuns(Arduino_GFX* gfx,int y,int first,int stop,uint16_t color){
 void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
                   bool fresh,uint16_t selectedUid,bool fullFrame){
   if(!gfx)return;
-  const uint16_t ink=gfxTint(0x31A6),border=gfxTint(0xB596);
+  const uint16_t ink=C_WHITE,border=gfxTint(0x8430);
   if(fullFrame) {
-    gfx->fillScreen(C_WHITE);
+    gfx->fillScreen(C_BLACK);
     ukrtext::centered(gfx,"ТРИВОГИ УКРАЇНИ",5,2,ink);
     gfx->fillRect(13,27,8,8,stateColor('N',true));
     gfx->drawRect(13,27,8,8,border);
@@ -74,6 +74,6 @@ void alertMapDraw(Arduino_GFX* gfx,const char statuses[28],
     gfx->drawCircle(x,y,6,C_BLACK);
     gfx->fillCircle(x,y,2,C_WHITE);
   }
-  gfx->fillRect(0,220,240,20,C_WHITE);
+  gfx->fillRect(0,220,240,20,C_BLACK);
   gfx->drawFastHLine(8,220,224,border);
 }
