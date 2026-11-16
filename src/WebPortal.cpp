@@ -137,6 +137,7 @@ static void handleGetConfig() {
   JsonObject feat = root["features"].to<JsonObject>();
   feat["ticker"] = (bool)WITH_TICKER;
   feat["alerts"] = (bool)WITH_ALERTS;
+  feat["mascot"] = (bool)WITH_MASCOT;
   feat["usage"]  = (bool)WITH_USAGE;
   feat["radar"]  = (bool)WITH_RADAR;
   feat["ha"]     = (bool)WITH_HA;
