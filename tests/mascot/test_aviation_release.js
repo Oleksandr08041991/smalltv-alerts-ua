@@ -17,6 +17,21 @@ const delta=mascot.split('static void drawSpriteDelta(')[1].split('} // namespac
 assert(!delta.includes('fillScreen(') && !delta.includes('fillRect('), 'Walking must update only changed pixels without erasing rectangles');
 assert(mascot.includes('drawSpriteDelta('), 'Sprite delta-rendering missing');
 assert(mascot.includes('draw16bitRGBBitmap('), 'Smooth motion must send multi-row RGB565 tiles, not thousands of per-scanline writes');
+assert(mascot.includes('struct PlanePose') && mascot.includes('p.invX=') &&
+  mascot.includes('p.scale=(int16_t)constrain('),
+  'The standalone hero must perform scaled, perspective 3-D style turns');
+assert(mascot.includes('const int x=120+pose.shiftX,y=122+pose.shiftY') &&
+  mascot.includes('const int rx=mini?40:109,ry=mini?30:78'),
+  'The full-size airplane must be enlarged, centered and clipped safely');
+assert(mascot.includes('switch(pattern%20u)'),'Motion selector must use 20 flight presets');
+for(let id=0;id<19;id++)
+  assert(new RegExp('case\\\\s*'+id+':').test(mascot), 'Missing flight preset '+id);
+assert(mascot.includes('motionVariant_=(uint8_t)(') &&
+  mascot.includes('%20u);'), 'A new flight routine must be chosen after each phrase');
+assert(mascot.includes('Wing thickness/underside') &&
+  mascot.includes('Raised canopy roof') &&
+  mascot.includes('Tapered three-layer nose cone'),
+  'The airplane needs dimensional wings, cockpit and nose');
 assert(phrases.includes('static const Phrase bank[] PROGMEM') && mascot.includes('motivation::copy('),'Quotes must be safely fetched from Flash');
 assert(mascot.includes('Signature swept AIRPLANE WINGS') && !mascot.includes('propeller struts'), 'Mascot must be a fixed-wing airplane');
 assert(mascot.includes('month=now.tm_mon+1')&&mascot.includes('mood_'),'Contextual gesture switching missing');
