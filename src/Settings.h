@@ -79,6 +79,8 @@ struct AlertsSettings {
 struct MascotSettings {
   bool enabled;
   uint16_t intervalMin;    // popups over the clock every 5..240 minutes
+  uint16_t speechSec;      // mascot quote screen and carousel quote: 10..300 sec
+  uint16_t roamSec;        // standalone mascot wandering time: 5..180 sec
   uint8_t focus;           // 0 mixed, 1 business, 2 life
   void setDefaults();
   void toJson(JsonObject o) const;
