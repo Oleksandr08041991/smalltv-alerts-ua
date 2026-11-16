@@ -1,0 +1,45 @@
+name: Diagnose ESP8266 crash address
+on:
+  push:
+    branches: [feature/air-alerts-slim]
+    paths: [.github/workflows/diagnose-crash.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Exactly the source revision used to generate the crashed image.
+          ref: c8c09fe6c867f864c5cb17b551ca60d8bb6f06ea
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install platformio==6.1.19
+      - run: pio run -e smalltv
+      - name: Decode user-reported crash addresses (same image build)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ELF=.pio/build/smalltv/firmware.elf
+          ADDR2LINE="$(find "$HOME/.platformio/packages" -name xtensa-lx106-elf-addr2line -type f | head -n 1)"
+          NM="$(find "$HOME/.platformio/packages" -name xtensa-lx106-elf-nm -type f | head -n 1)"
+          test -n "$ADDR2LINE"
+          echo "Crash PC 0x402187c8"
+          "$ADDR2LINE" -e "$ELF" -a -f -C -i 0x402187c8 0x402a9b66
+          echo "Nearby linked symbols:"
+          "$NM" -n -C "$ELF" | grep -B 4 -A 6 '402187' || true
+          echo "Image bytes:"
+          sha256sum .pio/build/smalltv/firmware.bin
+      - name: Upload debug ELF and map for comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-symbols-c8c09fe
+          path: |
+            .pio/build/smalltv/firmware.elf
+            .pio/build/smalltv/firmware.map
+          retention-days: 5
