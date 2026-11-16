@@ -4,7 +4,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const read=f=>fs.readFileSync(f,'utf8');
 const phrases=read('src/features/mascot/MotivationPhrases.h');
-const count=(phrases.match(/^  \{"/gm)||[]).length;
+const count=(phrases.match(/^  \{t\d+,a\d+,[01]\},?$/gm)||[]).length;
 assert(count>=130, 'At least 130 aviation and business motivational lines required');
 assert(phrases.includes('Леся Українка')&&phrases.includes('Іван Франко'),'Literary authors missing');
 assert(phrases.includes('Франклін • переказ'),'Franklin paraphrases must be identified as such');
@@ -12,11 +12,12 @@ assert(phrases.includes('Авіадруг'),'Original texts must be attributed t
 assert(phrases.includes('PROGMEM') && phrases.includes('memcpy_P'), 'All quotes must be Flash-backed to save OTA heap');
 const mascot=read('src/features/mascot/MascotMode.cpp');
 const renderer=mascot.split('static uint8_t mascotPixel(')[1].split('static uint16_t mascotColor(')[0];
-assert(renderer.includes('blink') && renderer.includes('flap') && renderer.includes('grin'), 'Animated eyes, wings and smile missing');
+assert(renderer.includes('blink') && renderer.includes('flex') && renderer.includes('grin'), 'Animated eyes, wings and smile missing');
 const delta=mascot.split('static void drawSpriteDelta(')[1].split('} // namespace')[0];
 assert(!delta.includes('fillScreen(') && !delta.includes('fillRect('), 'Walking must update only changed pixels without erasing rectangles');
 assert(mascot.includes('drawSpriteDelta('), 'Sprite delta-rendering missing');
 assert(mascot.includes('draw16bitRGBBitmap('), 'Smooth motion must send multi-row RGB565 tiles, not thousands of per-scanline writes');
+assert(phrases.includes('static const Phrase bank[] PROGMEM') && mascot.includes('motivation::copy('),'Quotes must be safely fetched from Flash');
 assert(mascot.includes('Signature swept AIRPLANE WINGS') && !mascot.includes('propeller struts'), 'Mascot must be a fixed-wing airplane');
 assert(mascot.includes('month=now.tm_mon+1')&&mascot.includes('mood_'),'Contextual gesture switching missing');
 assert(mascot.includes('intervalMin*60000UL'),'Popup interval not configurable');
