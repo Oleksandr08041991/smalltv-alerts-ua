@@ -142,8 +142,9 @@
 #define MODE_NOTIFY    4             // transient overlay: armed over HTTP, never persisted
 #define MODE_THEME     6             // declarative installed clock faces
 #define MODE_HA        5
-#define MODE_ALERTS    7             // air alerts Ukraine             // Home Assistant screens pushed over MQTT
-#define DEFAULT_MODE (WITH_TICKER ? MODE_STOCKS : MODE_ALERTS)
+#define MODE_ALERTS    7             // air alerts Ukraine
+#define MODE_CLOCK     8             // built-in clock faces
+#define DEFAULT_MODE MODE_CLOCK
 #define DEFAULT_CAROUSEL_SEC 30      // per-mode dwell in carousel
 
 // ---------------------------------------------------------------------------
