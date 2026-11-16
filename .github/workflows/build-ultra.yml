@@ -40,6 +40,8 @@ jobs:
               raise SystemExit(f"Tag {os.environ['RELEASE_TAG']} != firmware {expected}")
           print(f"Verified release tag {expected}")
           PY
+      - name: Check display redraw regressions
+        run: node tests/alerts/test_display_refresh.js
       - name: Build SmallTV Ultra firmware and one-time loader
         run: pio run -e smalltv -e smalltv_loader
       - name: Verify OTA firmware size and stage files
