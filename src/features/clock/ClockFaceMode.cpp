@@ -40,7 +40,7 @@ static void altNeedle(Arduino_GFX* gfx,int minute,uint16_t color){
   // Altimeter-inspired indicator: angular position shows current minutes.
   // This is a clock face, NOT a sensor reading or an actual altitude.
   const float angle=(float)minute*PI/30.0f-PI/2;
-  gfx->drawLine(120,107,120+(int)(cosf(angle)*68),107+(int)(sinf(angle)*68),color);
+  gfx->drawLine(120,107,120+(int)(cosf(angle)*52),107+(int)(sinf(angle)*52),color);
 }
 static void altTimeWindow(Arduino_GFX* gfx,const tm& t){
   char hm[12];fmtHM(hm,t);
@@ -114,7 +114,7 @@ void ClockFaceMode::render(const Settings& s,const tm& t) {
     altNeedle(gfx,t.tm_min,C_WHITE);
     gfx->fillCircle(120,107,4,amber);
     altTimeWindow(gfx,t);
-    ukrtext::centered(gfx,"КИЇВ • ЧАС",205,1,C_GRAY);
+    ukrtext::centered(gfx,"КИЇВ - ЧАС",205,1,C_GRAY);
   }else if(face==3){ // retro green display
     gfx->drawRect(5,5,230,230,C_GREEN);
     for(int i=0;i<10;i++)gfx->drawFastVLine(13+i*24,13,8,C_DGRAY);
