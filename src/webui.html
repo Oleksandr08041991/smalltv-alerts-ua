@@ -57,6 +57,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
  <button data-t="wifi">Wi-Fi</button>
  <button data-t="display">Екран</button>
  <button data-t="alerts">Тривоги</button>
+ <button data-t="mascot">Авіадруг</button>
  <button data-t="ticker">Біржа</button>
  <button data-t="usage">Clawdmeter</button>
  <button data-t="radar">Радар</button>
@@ -118,6 +119,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <select id="mode" onchange="modeChanged()">
     <option value="clock">Годинник</option>
     <option value="alerts">Карта тривог</option>
+    <option value="mascot">Авіадруг — анімований помічник</option>
     <option value="stocks">Ticker</option>
     <option value="usage">Clawdmeter</option>
     <option value="radar">Радар</option>
@@ -129,6 +131,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <label>Змінювати режим кожні (с)</label><input id="carouselSec" type="number" min="5" max="3600">
     <div class="chk"><input id="carouselClock" type="checkbox"><label>Годинник</label></div>
     <div class="chk"><input id="carouselAlerts" type="checkbox"><label>Карта тривог</label></div>
+    <div class="chk"><input id="carouselMascot" type="checkbox"><label>Авіадруг</label></div>
     <div class="chk"><input id="carouselTicker" type="checkbox"><label>Ticker</label></div>
     <div class="chk"><input id="carouselUsage" type="checkbox"><label>Clawdmeter</label></div>
     <div class="chk"><input id="carouselRadar" type="checkbox"><label>Радар</label></div>
@@ -241,6 +244,24 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <label>Якщо нічний режим теж увімкнено</label>
    <select id="sunOverlap"><option value="0">Night mode first</option><option value="1">Sun schedule first</option><option value="2">The darker of the two</option></select>
    <small class="hint" id="sunNow">The screen rises from the lowest to the normal brightness (the slider above) over the sunrise fade, and falls back over the sunset fade. Sunrise and sunset are worked out on the device. Replaces auto-brightness.</small>
+  </div>
+ </section>
+
+ <!-- ANIMATED AVIATION FRIEND (feature) -->
+ <section id="mascot" class="tab">
+  <div class="card"><h2>Авіадруг — мікро-ШІ</h2>
+   <p class="hint">Анімований маленький дрон: моргає, ворушить крильцями, рухає ротом, міняє настрій. Комікс-булька містить фразу, а під нею — автора.</p>
+   <div class="chk"><input type="checkbox" id="mascotEnabled"><label>Увімкнути авіадруга та фрази поверх годинника</label></div>
+   <div class="row"><div><label>Показувати фразу кожні (хв)</label>
+    <input type="number" id="mascotIntervalMin" min="5" max="240"></div>
+    <div><label>Тематика</label>
+     <select id="mascotFocus">
+      <option value="0">Змішана: мотивація та бізнес</option>
+      <option value="1">Бізнес і робота</option>
+      <option value="2">Загальна мотивація</option>
+     </select></div></div>
+   <p class="hint">100 українських фраз: 5 коротких рядків з української літератури, 25 адаптованих висловів за мотивами Бенджаміна Франкліна та 70 авторських. Різні жести й настрій навіть для повторів. Добірка локально змінюється щомісяця; нові тексти надходитимуть із наступними оновленнями прошивки.</p>
+   <p class="hint">Для постійної анімації виберіть «Екран → Режим → Авіадруг». Початок повітряної тривоги завжди має пріоритет.</p>
   </div>
  </section>
 
@@ -553,8 +574,8 @@ var TZMAP={
 function fillTz(){var s=$('tz');if(!s)return;var keys=Object.keys(TZMAP).filter(function(k){return k!==''});
  keys.sort();s.innerHTML='<option value="">UTC</option>'+keys.map(function(k){return '<option value="'+k+'">'+k+'</option>'}).join('');}
 
-var MODEOPT={ticker:'stocks',usage:'usage',radar:'radar',ha:'ha',theme:'theme',alerts:'alerts'};
-var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme',alerts:'carouselAlerts',clock:'carouselClock'};
+var MODEOPT={ticker:'stocks',usage:'usage',radar:'radar',ha:'ha',theme:'theme',alerts:'alerts',mascot:'mascot'};
+var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme',alerts:'carouselAlerts',clock:'carouselClock',mascot:'carouselMascot'};
 function hideFeat(name){
  var b=document.querySelector('nav button[data-t="'+name+'"]'); if(b)b.remove();
  var sec=$(name); if(sec)sec.remove();
@@ -577,7 +598,7 @@ function setGain(id,lab,v){var n=(v!=null?v:100);sv(id,n);var e=$(lab);if(e)e.te
 function resetColors(){setGain('rGain','rgVal',100);setGain('gGain','ggVal',100);setGain('bGain','bgVal',100);
  toast('Gains reset — press Save settings to apply')}
 function loadConfig(){return j('/api/config').then(function(c){C=c;
- var f=c.features||{}; ['ticker','usage','radar','ha','alerts'].forEach(function(k){if(f[k]===false)hideFeat(k)});
+ var f=c.features||{}; ['ticker','usage','radar','ha','alerts','mascot'].forEach(function(k){if(f[k]===false)hideFeat(k)});
  // WireGuard is only built for the chips with room for it; drop the card otherwise
  if(f.theme!==true){hideFeat('theme');var tc=$('themeCard');if(tc)tc.remove()}else{loadThemes()}
  if(f.wireguard===false){var wc=$('wgCard'); if(wc)wc.remove()}
@@ -595,7 +616,7 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  sv('wgAddress',w.address); sv('wgAllowedIps',w.allowedIps);
  sv('wgKeepalive',w.keepalive!=null?w.keepalive:25);
  var pk=$('wgPrivateKey'); if(pk)pk.placeholder=w.privateKeySet?'(unchanged)':'paste the private key';
- var t=c.ticker||{}, u=c.usage||{}, al=c.alerts||{};
+ var t=c.ticker||{}, u=c.usage||{}, al=c.alerts||{}, mc=c.mascot||{};
  // shared
  ['apSsid','hostname'].forEach(function(k){$(k).value=c[k]!=null?c[k]:''});
  renderWifi(c.wifi||(c.staSsid?[{ssid:c.staSsid,passSet:c.staPassSet}]:[]));
@@ -619,10 +640,12 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  sv('locLat',ck.lat||''); sv('locLon',ck.lon||'');
  sc('sunEnabled',!!ck.sunEnabled); sv('sunLow',ck.sunLow!=null?ck.sunLow:5); $('slVal')&&($('slVal').textContent=(ck.sunLow!=null?ck.sunLow:5));
  sv('sunRise',ck.sunRise!=null?ck.sunRise:60); sv('sunSet',ck.sunSet!=null?ck.sunSet:60); sv('sunOverlap',ck.sunOverlap||0);
- $('mode').value=c.mode||'alerts'; modeChanged();
+ $('mode').value=c.mode||'clock'; if(!$('mode').value)$('mode').value='clock'; modeChanged();
  sv('carouselSec',c.carouselSec||30);
  sc('carouselTicker',c.carouselTicker!==false); sc('carouselUsage',c.carouselUsage!==false); sc('carouselRadar',c.carouselRadar!==false);
- sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false); sc('carouselClock',c.carouselClock===true);
+ sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false); sc('carouselClock',c.carouselClock===true); sc('carouselMascot',c.carouselMascot===true);
+ // Aviation mascot preferences.
+ sc('mascotEnabled',mc.enabled!==false);sv('mascotIntervalMin',mc.intervalMin||30);sv('mascotFocus',mc.focus||0);
  // Air Alerts settings. The token itself is intentionally never received.
  sc('alertsEnabled',al.enabled!==false);sc('alertsNotify',al.notify!==false);
  var uids=$('alertsUid');
@@ -793,6 +816,9 @@ function collect(){
   });
   o.ticker=t;
  }
+ // Aviation mascot slice
+ if($('mascot'))o.mascot={enabled:gc('mascotEnabled'),
+   intervalMin:parseInt(gv('mascotIntervalMin'))||30,focus:parseInt(gv('mascotFocus'))||0};
  // Air Alerts slice: an empty token field keeps the saved secret.
  if($('alerts')){
   var aa={enabled:gc('alertsEnabled'),notify:gc('alertsNotify'),uid:parseInt(gv('alertsUid'))||14,
