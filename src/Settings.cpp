@@ -244,7 +244,7 @@ void ClockSettings::fromJson(JsonObjectConst o) {
     const char* code = o["lang"];
     if (!strcmp(code, "uk") || smalltv::languageIndex(code, strlen(code)) >= 0) lang = code;   // an unknown code keeps the old one
   }
-  if (o["face"].is<int>()) face = constrain((int)o["face"], 0, 3);
+  if (o["face"].is<int>()) face = constrain((int)o["face"], 0, 4);
   if (o["nightEnabled"].is<bool>())       nightEnabled = o["nightEnabled"];
   if (o["nightStart"].is<const char*>())  nightStartMin = hhmmToMin(o["nightStart"], nightStartMin);
   if (o["nightEnd"].is<const char*>())    nightEndMin   = hhmmToMin(o["nightEnd"], nightEndMin);
