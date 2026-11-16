@@ -503,6 +503,9 @@ static void handleHaClear() {
 // Check the newest GitHub release against the running version.
 static void handleCheckUpdate() {
   if (!requireAuth()) return;
+  // Release transient graphics allocations so the HTTPS check has a
+  // sufficiently large contiguous BearSSL buffer on ESP8266.
+  appRelease();
   OtaLatest r = otaCheckLatest(*S);
   JsonDocument doc;
   JsonObject o = doc.to<JsonObject>();
@@ -754,15 +757,14 @@ void webPortalLoop() {
   if (g_selfUpdate) {
     g_selfUpdate = false;
 #if defined(SMALLTV_FAMILY_ESP8266)
-    // RAM-tight chip: verify there is something to install, then queue the
-    // download for the next boot (otaBootUpdate in setup(), ~45 KB free) and
-    // reboot. A failure there lands back in g_updateMsg via otaTakeBootResult.
-    OtaLatest r = otaCheckLatest(*S);
-    if (!r.ok)         g_updateMsg = "check failed: " + r.error;
-    else if (!r.newer) g_updateMsg = "already up to date (" FW_VERSION ")";
-    else if (otaRequestBootUpdate(r.tag.c_str())) {
-      g_updateMsg = "updating...";
-      scheduleReboot(400);
+    // The original flow ran a full TLS GitHub check in a memory-fragmented
+    // runtime, often failing with "not enough heap" before it even queued OTA.
+    // Queue the operation with a tiny LittleFS marker, then reboot and check +
+    // download before graphics/web feature allocations. This is an intentional
+    // user action; no background update or unsolicited restart.
+    if (otaRequestBootUpdate("latest")) {
+      g_updateMsg = "queued; checking release after reboot...";
+      scheduleReboot(500);
     } else {
       g_updateMsg = F("could not queue update (storage error)");
     }
