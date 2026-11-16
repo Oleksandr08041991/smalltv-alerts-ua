@@ -118,6 +118,49 @@ jobs:
               f.write("tag="+tag+"\n")
           print("Publishing",tag)
           PY
+      # Publish the same verified image to a GitHub branch that browser CDNs
+      # can fetch via CORS. GitHub *Release assets* themselves lack CORS headers
+      # on the CDN, so device-web-UI browser fetches cannot use those assets.
+      - name: Publish CORS-friendly browser OTA firmware branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          test -s dist/smalltv-mod-firmware.bin
+          install -d "$RUNNER_TEMP/browser-ota"
+          cd "$RUNNER_TEMP/browser-ota"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads origin ota > /dev/null; then
+            git fetch -q --depth=1 origin ota
+            git checkout -q -b ota FETCH_HEAD
+          else
+            git checkout -q -b ota
+          fi
+          mkdir -p firmware
+          cp "${GITHUB_WORKSPACE}/dist/smalltv-mod-firmware.bin" "firmware/${RELEASE_TAG}.bin"
+          python - <<'PY'
+          import hashlib,json,os,pathlib
+          tag=os.environ["RELEASE_TAG"]
+          data=pathlib.Path("firmware",tag+".bin").read_bytes()
+          if len(data)<300000 or data[0]!=0xE9:
+              raise SystemExit("Not a valid ESP8266 firmware image")
+          sha=hashlib.sha256(data).hexdigest()
+          manifest={"version":tag,"file":"firmware/"+tag+".bin","size":len(data),"sha256":sha}
+          pathlib.Path("latest.json").write_text(json.dumps(manifest,ensure_ascii=False))
+          pathlib.Path("firmware",tag+".json").write_text(json.dumps(manifest,ensure_ascii=False))
+          print("Published",tag,len(data),sha)
+          PY
+          git add "firmware/${RELEASE_TAG}.bin" "firmware/${RELEASE_TAG}.json" latest.json
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Browser OTA ${RELEASE_TAG}"
+            git push -q origin HEAD:refs/heads/ota
+          fi
       - name: Create release with firmware for in-device OTA
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
