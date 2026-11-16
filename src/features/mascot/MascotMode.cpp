@@ -8,10 +8,8 @@
 
 MascotMode g_mascotMode;
 namespace {
-constexpr uint32_t kSpeechMs=60000UL;
+// Durations are saved in MascotSettings and configurable from the web UI.
 constexpr uint32_t kPopupMs=15000UL;
-constexpr uint32_t kCarouselQuoteMs=12000UL;
-constexpr uint32_t kRoamMs=30000UL;
 static uint16_t navy(){return gfxTint(0x112B);}
 static uint16_t sky(){return gfxTint(0x24B8);}
 static uint16_t warm(){return gfxTint(0xFDB0);}
@@ -267,18 +265,18 @@ void MascotMode::tick(const Settings& s,bool dedicated){
       dedicated_=true;
       phase_=SPEAK;
       choose(s);
-      phaseUntilMs_=now+kSpeechMs;
+      phaseUntilMs_=now+(uint32_t)s.mascot.speechSec*1000UL;
     }else if((int32_t)(now-phaseUntilMs_)>=0){
       if(phase_==SPEAK){
         phase_=ROAM;
         roamStartMs_=now;
-        phaseUntilMs_=now+kRoamMs;
+        phaseUntilMs_=now+(uint32_t)s.mascot.roamSec*1000UL;
         mood_=(mood_+1u+(speechSerial_%3u))%5u;
         painted_=false;prevX_=-1;nextAnimationMs_=0;
       }else{
         phase_=SPEAK;
         choose(s);
-        phaseUntilMs_=now+kSpeechMs;
+        phaseUntilMs_=now+(uint32_t)s.mascot.speechSec*1000UL;
       }
     }
     return;
@@ -315,7 +313,10 @@ void MascotMode::drawSpeechFrame(const Settings& s){
   ukrtext::centered(gfx,"ДРУЖНІЙ ПІЛОТ",16,1,sky());
   const motivation::Phrase& p=motivation::get(selectedIndex_);
   drawQuote(gfx,p.text);
-  ukrtext::centered(gfx,p.author,141,1,C_GRAY);
+  // Keep author attribution visibly legible: 2x Ukrainian font, blue on
+  // white comic bubble. "Original" lines are labelled, not falsely credited.
+  const uint8_t authorSize=ukrtext::textWidth(p.author,2)<=216?2:1;
+  ukrtext::centered(gfx,p.author,136,authorSize,gfxTint(0x2539));
   gfx->drawFastHLine(14,229,210,sky());
   painted_=true;nextAnimationMs_=0;prevSmallX_=-1;
 }
@@ -344,7 +345,7 @@ void MascotMode::drawRoaming(const Settings& s){
   if(!painted_){
     gfx->fillScreen(C_BLACK);
     ukrtext::centered(gfx,"АВІАДРУГ",3,1,sky());
-    ukrtext::centered(gfx,"НАСТУПНА ФРАЗА ЗА 30 С",228,1,C_GRAY);
+    ukrtext::centered(gfx,"АВІАДРУГ ГУЛЯЄ",228,1,C_GRAY);
     painted_=true;prevX_=-1;nextAnimationMs_=0;
   }
   const uint32_t now=millis();
@@ -387,7 +388,7 @@ void MascotMode::service(const Settings& s){
     if(!carouselActive_ || (int32_t)(now-carouselQuoteUntilMs_)>=0){
       carouselActive_=true;
       choose(s);
-      carouselQuoteUntilMs_=now+kCarouselQuoteMs;
+      carouselQuoteUntilMs_=now+(uint32_t)s.mascot.speechSec*1000UL;
     }
     renderOverlay(s);
     return;
