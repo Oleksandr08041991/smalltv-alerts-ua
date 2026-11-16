@@ -62,6 +62,18 @@ struct TickerSettings {
   void fromJson(JsonObjectConst o);   // applies only the keys present
 };
 
+// ---- Ukraine air-alerts mode ------------------------------------------------
+struct AlertsSettings {
+  bool enabled;
+  uint16_t uid;         // alerts.in.ua region UID (14 = Kyiv Oblast)
+  String label;         // ASCII display label; GFX built-in font is not Cyrillic
+  String token;         // API bearer token, persisted only, not returned to web UI
+  uint16_t pollSec;     // 30..600, 60 by default
+  void setDefaults();
+  void toJson(JsonObject o, bool includeSecrets) const;
+  void fromJson(JsonObjectConst o);
+};
+
 // ---- Claude usage feature slice -------------------------------------------
 struct UsageSettings {
   String   usageUrl;      // daemon HTTP endpoint, e.g. http://192.168.1.10:8787/
@@ -220,7 +232,7 @@ struct Settings {
 
   // --- Carousel (mode == MODE_CAROUSEL): dwell + which features rotate ---
   uint16_t carouselSec;
-  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme;
+  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme, carouselAlerts;
 
   // --- Shared HTTP / display ---
   uint16_t httpTimeout; // ms
@@ -233,6 +245,7 @@ struct Settings {
 #if WITH_TICKER
   TickerSettings  ticker;
 #endif
+  AlertsSettings  alerts;
   UsageSettings   usage;
   RadarSettings   radar;
   HaSettings      ha;        // MQTT broker for HA screens
