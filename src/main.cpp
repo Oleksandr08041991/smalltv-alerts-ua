@@ -18,6 +18,9 @@
 #include "OtaUpdate.h"
 #include "Mode.h"
 #include "Clock.h"
+#if WITH_MASCOT
+#include "features/mascot/MascotMode.h"
+#endif
 #include "features/clock/ClockFaceMode.h"
 #include "SunTimes.h"
 #include "WgClient.h"
@@ -51,6 +54,9 @@
 // state of its own — each mode owns its fetch/render/dirty tracking.
 static DisplayMode* kModes[] = {
   &g_clockFaceMode,
+#if WITH_MASCOT
+  &g_mascotMode,
+#endif
 #if WITH_ALERTS
   &g_alertsMode,
 #endif
@@ -82,6 +88,7 @@ static bool     g_carPaused = false;   // button paused the auto-rotation (stays
 static bool carouselHas(const Settings& s, const DisplayMode* m) {
   switch (m->modeConst()) {
     case MODE_CLOCK:  return s.carouselClock;
+    case MODE_MASCOT: return s.carouselMascot;
     case MODE_STOCKS: return s.carouselTicker;
     case MODE_USAGE:  return s.carouselUsage;
     case MODE_ALERTS: return s.carouselAlerts;
@@ -475,6 +482,10 @@ void loop() {
   g_alertsMode.poll(g_settings);
 #endif
 
+#if WITH_MASCOT
+  g_mascotMode.tick(g_settings,g_settings.mode==MODE_MASCOT);
+#endif
+
   // --- STA mode: the active feature fetches + renders itself ---
 
   // Night-mode state machine (NTP-trust gate), then apply the effective brightness
@@ -516,9 +527,22 @@ void loop() {
 #else
   const bool alertFinished = false;
 #endif
+#if WITH_MASCOT
+  static bool mascotWasOnScreen=false;
+  if(g_mascotMode.overlayActive()){
+    mascotWasOnScreen=true;
+    g_mascotMode.renderOverlay(g_settings);
+    delay(5);
+    return;
+  }
+  const bool mascotFinished=mascotWasOnScreen;
+  mascotWasOnScreen=false;
+#else
+  const bool mascotFinished=false;
+#endif
   DisplayMode* m = activeMode(g_settings);
   if (m) {
-    if (restore || alertFinished) m->wake(g_settings);
+    if (restore || alertFinished || mascotFinished) m->wake(g_settings);
     m->service(g_settings);
   }
 
