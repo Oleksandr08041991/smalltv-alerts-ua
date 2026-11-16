@@ -1082,7 +1082,7 @@ function checkUpdate(){
  $('ghUpBtn').disabled=true;
  $('chkBtn').disabled=true;
  $('ghMsg').textContent='Перевіряю останній GitHub Release через браузер...';
- fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
+ return fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
  .then(function(r){if(!r.ok)throw Error('GitHub API HTTP '+r.status);return r.json()})
  .then(function(release){
   if(!/^v\d+\.\d+\.\d+$/.test(release.tag_name||''))throw Error('Некоректний номер релізу');
@@ -1135,7 +1135,7 @@ function selfUpdate(){
  if(!confirm('Встановити '+target.tag+' по Wi-Fi? Браузер завантажить .bin і передасть його GeekMagic. Живлення не відключати.'))return;
  $('ghUpBtn').disabled=true;$('chkBtn').disabled=true;
  $('ghMsg').textContent='Завантаження '+target.tag+' з GitHub CDN...';
- otaDownloadFirmware(target).then(function(buffer){
+ return otaDownloadFirmware(target).then(function(buffer){
   $('ghMsg').textContent='Прошивка отримана ('+buffer.byteLength+' байтів). Передаю на GeekMagic...';
   var form=new FormData();
   form.append('firmware',new Blob([buffer],{type:'application/octet-stream'}),'smalltv-mod-firmware.bin');
