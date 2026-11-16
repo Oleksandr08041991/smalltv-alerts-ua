@@ -133,13 +133,15 @@ void TickerSettings::fromJson(JsonObjectConst o) {
 // ===========================================================================
 void AlertsSettings::setDefaults() {
   enabled = true;
+  notify = true;
   uid = 14;              // Kyiv Oblast
-  label = "KYIV REGION";
+  label = "КИЇВСЬКА ОБЛАСТЬ";
   token = "";
   pollSec = 60;
 }
 void AlertsSettings::toJson(JsonObject o, bool includeSecrets) const {
   o["enabled"] = enabled;
+  o["notify"] = notify;
   o["uid"] = uid;
   o["label"] = label;
   o["pollSec"] = pollSec;
@@ -148,12 +150,13 @@ void AlertsSettings::toJson(JsonObject o, bool includeSecrets) const {
 }
 void AlertsSettings::fromJson(JsonObjectConst o) {
   if (o["enabled"].is<bool>()) enabled = o["enabled"];
+  if (o["notify"].is<bool>()) notify = o["notify"];
   if (o["uid"].is<int>()) uid = constrain((int)o["uid"], 1, 999);
   if (o["pollSec"].is<int>()) pollSec = constrain((int)o["pollSec"], 30, 600);
   if (o["label"].is<const char*>()) {
     String v = o["label"].as<String>();
     v.trim();
-    if (v.length() <= 26) label = v;
+    if (v.length() <= 72) label = v;
   }
   if (o["clearToken"].is<bool>() && o["clearToken"].as<bool>()) token = "";
   if (o["token"].is<const char*>()) {
