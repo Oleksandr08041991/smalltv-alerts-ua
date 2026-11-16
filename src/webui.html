@@ -1089,9 +1089,9 @@ function checkUpdate(){
   // A proxy with a raw media-type may instead return JSON directly.
   var manifest=meta;
   if(meta && meta.encoding==='base64' && meta.content){
-   manifest=JSON.parse(atob(meta.content.replace(/\\s/g,'')));
+   manifest=JSON.parse(atob(meta.content.replace(/\s/g,'')));
   }
-  if(!manifest || !/^v\\d+\\.\\d+\\.\\d+$/.test(manifest.version||''))
+  if(!manifest || !/^v\d+\.\d+\.\d+$/.test(manifest.version||''))
     throw Error('Некоректний OTA-маніфест');
   if(manifest.file !== 'firmware/'+manifest.version+'.bin')
     throw Error('OTA-файл не відповідає версії');
