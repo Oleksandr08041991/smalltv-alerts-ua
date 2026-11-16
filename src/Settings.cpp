@@ -131,15 +131,21 @@ void TickerSettings::fromJson(JsonObjectConst o) {
 // ===========================================================================
 // Aviation mascot preferences (100 original and public-domain adapted quotes)
 // ===========================================================================
-void MascotSettings::setDefaults(){enabled=true;intervalMin=30;focus=0;}
+void MascotSettings::setDefaults(){
+  enabled=true;intervalMin=30;speechSec=60;roamSec=30;focus=0;
+}
 void MascotSettings::toJson(JsonObject o) const {
   o["enabled"]=enabled;
   o["intervalMin"]=intervalMin;
+  o["speechSec"]=speechSec;
+  o["roamSec"]=roamSec;
   o["focus"]=focus;
 }
 void MascotSettings::fromJson(JsonObjectConst o) {
   if(o["enabled"].is<bool>()) enabled=o["enabled"];
   if(o["intervalMin"].is<int>()) intervalMin=constrain((int)o["intervalMin"],5,240);
+  if(o["speechSec"].is<int>())speechSec=constrain((int)o["speechSec"],10,300);
+  if(o["roamSec"].is<int>())roamSec=constrain((int)o["roamSec"],5,180);
   if(o["focus"].is<int>())focus=constrain((int)o["focus"],0,2);
 }
 
