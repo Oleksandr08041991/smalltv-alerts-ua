@@ -499,9 +499,22 @@ void loop() {
   const bool restore = false;
 #endif
 
+#if WITH_ALERTS
+  static bool alertWasOnScreen = false;
+  if (g_alertsMode.overlayActive()) {
+    alertWasOnScreen = true;
+    g_alertsMode.renderOverlay(g_settings);
+    delay(5);
+    return;
+  }
+  const bool alertFinished = alertWasOnScreen;
+  alertWasOnScreen = false;
+#else
+  const bool alertFinished = false;
+#endif
   DisplayMode* m = activeMode(g_settings);
   if (m) {
-    if (restore) m->wake(g_settings);
+    if (restore || alertFinished) m->wake(g_settings);
     m->service(g_settings);
   }
 
