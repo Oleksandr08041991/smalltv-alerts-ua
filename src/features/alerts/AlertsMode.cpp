@@ -140,9 +140,9 @@ void AlertsMode::render(const Settings& s) {
   if(usable) {
     switch(state_){
       case 'N':label="БЕЗ ТРИВОГИ";break;
-      case 'R':label="ПОВІТРЯНА ТРИВОГА";break;
-      case 'Y':label="ПОПЕРЕДНЯ ЗАГРОЗА";break;
-      case 'P':label="ЧАСТКОВА ТРИВОГА";break;
+      case 'R':label="ТРИВОГА";break;
+      case 'Y':label="ЗАГРОЗА";break;
+      case 'P':label="ЧАСТКОВА";break;
     }
   }
   // Bottom badge updates without clearing any other part of the map.
