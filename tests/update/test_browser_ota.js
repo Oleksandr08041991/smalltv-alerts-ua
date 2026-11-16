@@ -15,11 +15,11 @@ assert(workflow.includes('firmware/${OTA_TAG}.bin') && workflow.includes('refs/h
   'The browser firmware path must match the release publisher');
 const elements={
  ghMsg:{textContent:''},ghUpBtn:{disabled:true},
- chkBtn:{disabled:false},fwVer:{textContent:'SmallTV 3.7.2'}
+ chkBtn:{disabled:false},fwVer:{textContent:'SmallTV 3.7.3'}
 };
 const firmware=new Uint8Array(778160);firmware[0]=0xE9;
 const calls=[],timers=[];
-const release={tag_name:'v3.7.3',assets:[{name:'smalltv-mod-firmware.bin',size:firmware.length,digest:null}]};
+const release={version:'v3.7.4',file:'firmware/v3.7.4.bin',size:firmware.length,sha256:'a'.repeat(64)};
 let uploaded=null,confirmed=0;
 class Xhr{
  constructor(){this.upload={}}
@@ -37,11 +37,12 @@ const ctx={
  $:name=>elements[name],C:{version:'3.7.2'},console,
  window:{crypto:{}},crypto:{},XMLHttpRequest:Xhr,FormData:Form,Blob,
  Math,Uint8Array,String,Array,Error,encodeURIComponent,
+ atob:v=>Buffer.from(v,'base64').toString('utf8'),
  location:{reload:()=>{}},setTimeout:(fn,ms)=>timers.push([fn,ms]),
  confirm:()=>{confirmed++;return true},
  fetch:async function(url){
   calls.push(url);
-  if(url.includes('api.github.com'))return {ok:true,json:async()=>release};
+  if(url.includes('api.github.com'))return {ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(release)).toString('base64')})};
   if(url.includes('cdn.jsdelivr.net'))return {ok:true,arrayBuffer:async()=>firmware.buffer};
   throw new Error('Unexpected URL '+url);
  }
@@ -51,7 +52,7 @@ vm.runInContext(script,ctx);
 async function test(){
  await vm.runInContext('checkUpdate()',ctx);
  assert.equal(elements.ghUpBtn.disabled,false,'Update button must unlock for newer release');
- assert(elements.ghMsg.textContent.includes('v3.7.3'));
+ assert(elements.ghMsg.textContent.includes('v3.7.4'));
  await vm.runInContext('selfUpdate()',ctx);
  assert.equal(confirmed,1);
  assert(uploaded && uploaded.method==='POST' && uploaded.url==='/update');
@@ -63,15 +64,15 @@ async function test(){
  assert(calls.some(x=>x.includes('cdn.jsdelivr.net')),'Firmware downloaded from CORS CDN');
 
  // False-positive up-to-date: no upload should be available.
- elements.fwVer.textContent='SmallTV 3.7.3';
+ elements.fwVer.textContent='SmallTV 3.7.4';
  await vm.runInContext('checkUpdate()',ctx);
  assert.equal(elements.ghUpBtn.disabled,true);
  assert(elements.ghMsg.textContent.includes('актуальна'));
  // Invalid binary is blocked before posting to the device.
- elements.fwVer.textContent='SmallTV 3.7.2';
+ elements.fwVer.textContent='SmallTV 3.7.3';
  await vm.runInContext('checkUpdate()',ctx);
  ctx.fetch=async(url)=>url.includes('api.github.com')
-     ?{ok:true,json:async()=>release}
+     ?{ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(release)).toString('base64')})}
      :{ok:true,arrayBuffer:async()=>new Uint8Array(firmware.length).buffer};
  const before=uploaded;
  await vm.runInContext('selfUpdate()',ctx);
