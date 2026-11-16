@@ -65,6 +65,7 @@ struct TickerSettings {
 // ---- Ukraine air-alerts mode ------------------------------------------------
 struct AlertsSettings {
   bool enabled;
+  bool notify;          // show popup on start and end of alert
   uint16_t uid;         // alerts.in.ua region UID (14 = Kyiv Oblast)
   String label;         // ASCII display label; GFX built-in font is not Cyrillic
   String token;         // API bearer token, persisted only, not returned to web UI
