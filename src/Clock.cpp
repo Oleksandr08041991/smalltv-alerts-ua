@@ -52,7 +52,9 @@ void clockReapply(const Settings& s) {
   // with a wrong clock (and that build is an ESP32, where the heap cost is moot).
   const bool themeOnScreen = WITH_THEME &&
       (s.mode == MODE_THEME || (s.mode == MODE_CAROUSEL && s.carouselTheme));
-  if (!s.clock.nightEnabled && !s.clock.sunEnabled && !wgNeedsClock(s) && !themeOnScreen) return;
+  const bool alertsOnScreen = (s.mode == MODE_ALERTS) ||
+      (s.mode == MODE_CAROUSEL && s.carouselAlerts);
+  if (!s.clock.nightEnabled && !s.clock.sunEnabled && !wgNeedsClock(s) && !themeOnScreen && !alertsOnScreen) return;
   if (!s_ntpStarted || s.clock.tzPosix != s_armedTz) clockBegin(s);
 }
 
