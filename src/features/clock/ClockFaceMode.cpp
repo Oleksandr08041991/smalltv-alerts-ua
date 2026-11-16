@@ -36,6 +36,18 @@ static void hands(Arduino_GFX* gfx,int hours,int minute,int second,
   hand(gfx,sc,74,seconds);
   gfx->fillCircle(120,110,4,primary);
 }
+static void altNeedle(Arduino_GFX* gfx,int minute,uint16_t color){
+  // Altimeter-inspired indicator: angular position shows current minutes.
+  // This is a clock face, NOT a sensor reading or an actual altitude.
+  const float angle=(float)minute*PI/30.0f-PI/2;
+  gfx->drawLine(120,107,120+(int)(cosf(angle)*68),107+(int)(sinf(angle)*68),color);
+}
+static void altTimeWindow(Arduino_GFX* gfx,const tm& t){
+  char hm[12];fmtHM(hm,t);
+  gfx->fillRoundRect(50,129,140,48,6,gfxTint(0x18E3));
+  gfx->drawRoundRect(50,129,140,48,6,C_GRAY);
+  gfxDrawCentered(hm,138,4,C_WHITE);
+}
 static void drawDate(Arduino_GFX* gfx,const tm& t,int y){
   char date[24]; fmtDate(date,t);
   // The inset is intentionally bounded: no change to static borders/lines.
@@ -78,6 +90,31 @@ void ClockFaceMode::render(const Settings& s,const tm& t) {
     gfxDrawCentered(hm,92,5,C_WHITE);
     gfxDrawCentered(sec,177,3,orange);
     drawDate(gfx,t,220);
+  }else if(face==4){ // aircraft altimeter-inspired clock, no bogus altitude values
+    const uint16_t amber=gfxTint(0xFDC0);
+    gfx->drawCircle(120,107,99,C_DGRAY);
+    gfx->drawCircle(120,107,95,C_WHITE);
+    gfx->drawCircle(120,107,89,C_DGRAY);
+    for(int i=0;i<60;i++){
+      const float a=(float)i*PI/30.0f-PI/2;
+      const int outer=88,inner=(i%5==0)?75:82;
+      gfx->drawLine(120+(int)(cosf(a)*inner),107+(int)(sinf(a)*inner),
+                    120+(int)(cosf(a)*outer),107+(int)(sinf(a)*outer),
+                    (i%5==0)?C_WHITE:C_GRAY);
+    }
+    for(int i=0;i<10;i++){
+      char digit[3];snprintf(digit,sizeof(digit),"%d",i);
+      const float a=(float)i*PI/5.0f-PI/2;
+      gfx->setTextSize(1);
+      gfx->setTextColor(amber);
+      gfx->setCursor(116+(int)(cosf(a)*63),103+(int)(sinf(a)*63));
+      gfx->print(digit);
+    }
+    ukrtext::centered(gfx,"ALT",15,2,amber);
+    altNeedle(gfx,t.tm_min,C_WHITE);
+    gfx->fillCircle(120,107,4,amber);
+    altTimeWindow(gfx,t);
+    ukrtext::centered(gfx,"КИЇВ • ЧАС",205,1,C_GRAY);
   }else if(face==3){ // retro green display
     gfx->drawRect(5,5,230,230,C_GREEN);
     for(int i=0;i<10;i++)gfx->drawFastVLine(13+i*24,13,8,C_DGRAY);
@@ -120,6 +157,13 @@ void ClockFaceMode::updateTime(const Settings& s,const tm& t,
     gfx->fillRect(95,175,50,28,C_BLACK);
     gfxDrawCentered(sec,177,3,orange);
     if(dayChanged)drawDate(gfx,t,220);
+  }else if(face==4){
+    if(minuteChanged){
+      if(lastMinute_>=0) altNeedle(gfx,lastMinute_,C_BLACK);
+      altNeedle(gfx,t.tm_min,C_WHITE);
+      gfx->fillCircle(120,107,4,gfxTint(0xFDC0));
+      altTimeWindow(gfx,t);
+    }
   }else if(face==3){
     if(minuteChanged){
       gfx->fillRect(32,87,176,45,C_BLACK);
