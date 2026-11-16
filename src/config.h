@@ -144,6 +144,7 @@
 #define MODE_HA        5
 #define MODE_ALERTS    7             // air alerts Ukraine
 #define MODE_CLOCK     8             // built-in clock faces
+#define MODE_MASCOT    9             // animated aviation friend and quotes
 #define DEFAULT_MODE MODE_CLOCK
 #define DEFAULT_CAROUSEL_SEC 30      // per-mode dwell in carousel
 
@@ -255,6 +256,9 @@
 // omits that feature's module from the registry and its web UI section.
 // (WITH_RADAR ships off until the radar module lands.)
 // ---------------------------------------------------------------------------
+#ifndef WITH_MASCOT
+#define WITH_MASCOT 1
+#endif
 #ifndef WITH_ALERTS
 #define WITH_ALERTS 1
 #endif
