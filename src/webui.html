@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -53,15 +53,15 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 <body>
 <header><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="13" width="50" height="38" rx="6"/><polyline points="15,38 23,30 30,34 37,22 44,28 50,20"/><path d="M24 51v6M40 51v6M20 57h8M36 57h8"/></g></svg><span id="dot" class="dot"></span><h1>SmallTV</h1><span id="chip" class="chip" style="display:none"></span><span id="hi" class="muted"></span></header>
 <nav>
- <button data-t="status" class="active">Status</button>
- <button data-t="wifi">WiFi</button>
- <button data-t="display">Display</button>
- <button data-t="alerts">Air Alerts</button>
- <button data-t="ticker">Ticker</button>
+ <button data-t="status" class="active">Стан</button>
+ <button data-t="wifi">Wi-Fi</button>
+ <button data-t="display">Екран</button>
+ <button data-t="alerts">Тривоги</button>
+ <button data-t="ticker">Біржа</button>
  <button data-t="usage">Clawdmeter</button>
- <button data-t="radar">Radar</button>
+ <button data-t="radar">Радар</button>
  <button data-t="ha">Home Assistant</button>
- <button data-t="update">System</button>
+ <button data-t="update">Система</button>
 </nav>
 <main>
  <!-- STATUS -->
@@ -116,17 +116,19 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   <div class="card"><h2>Mode</h2>
    <label>What this device shows</label>
    <select id="mode" onchange="modeChanged()">
-    <option value="alerts">Air Alerts Ukraine</option>
+    <option value="clock">Годинник</option>
+    <option value="alerts">Карта тривог</option>
     <option value="stocks">Ticker</option>
     <option value="usage">Clawdmeter</option>
     <option value="radar">Radar</option>
     <option value="ha">Home Assistant</option>
-    <option value="theme">Theme clock</option>
-    <option value="carousel">Carousel (rotate modes)</option>
+    <option value="theme">Завантажена тема годинника</option>
+    <option value="carousel">Карусель</option>
    </select>
    <div id="carouselRow">
     <label>Switch mode every (s)</label><input id="carouselSec" type="number" min="5" max="3600">
-    <div class="chk"><input id="carouselAlerts" type="checkbox"><label>Air Alerts</label></div>
+    <div class="chk"><input id="carouselClock" type="checkbox"><label>Годинник</label></div>
+    <div class="chk"><input id="carouselAlerts" type="checkbox"><label>Карта тривог</label></div>
     <div class="chk"><input id="carouselTicker" type="checkbox"><label>Ticker</label></div>
     <div class="chk"><input id="carouselUsage" type="checkbox"><label>Clawdmeter</label></div>
     <div class="chk"><input id="carouselRadar" type="checkbox"><label>Radar</label></div>
@@ -135,7 +137,14 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    </div>
    <small class="hint">Each name here is the tab that configures it. Pick the active feature, then set it up in its own tab. Carousel rotates through the ticked features.</small>
   </div>
-  <div class="card" id="themeCard"><h2>Theme clocks</h2>
+  <div class="card" id="clockFaceCard"><h2>Вбудовані теми годинника</h2>
+   <label>Виберіть стиль</label><select id="clockFace">
+    <option value="0">Мінімалістичний</option><option value="1">Аналоговий</option>
+    <option value="2">Інформаційний</option><option value="3">Ретро</option>
+   </select>
+   <small class="hint">Оберіть режим «Годинник». Сповіщення про тривоги з'являються поверх будь-якої теми.</small>
+  </div>
+  <div class="card" id="themeCard"><h2>Додаткові теми .stheme</h2>
    <label>Installed theme</label><select id="themeSelect" onchange="themeChoiceChanged()"></select>
    <div style="margin-top:12px"><button class="btn" id="themeUseBtn" onclick="selectTheme()">Use theme</button>
     <button class="btn" onclick="deleteTheme()">Remove</button></div>
@@ -199,8 +208,8 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   <div class="card"><h2>Clock &amp; night mode</h2>
    <label>Timezone</label>
    <select id="tz"></select>
-   <label>Language <span class="muted">(month and weekday names on spec 2 themes)</span></label>
-   <select id="lang"><option value="en">English</option><option value="pt">Portugu&ecirc;s</option><option value="es">Espa&ntilde;ol</option><option value="fr">Fran&ccedil;ais</option><option value="de">Deutsch</option><option value="it">Italiano</option></select>
+   <label>Мова <span class="muted">(інтерфейс, вбудований годинник, повідомлення)</span></label>
+   <select id="lang"><option value="uk">Українська</option><option value="en">English</option><option value="pt">Portugu&ecirc;s</option><option value="es">Espa&ntilde;ol</option><option value="fr">Fran&ccedil;ais</option><option value="de">Deutsch</option><option value="it">Italiano</option></select>
    <div class="muted" id="clockNow" style="margin:8px 0">Clock: -</div>
    <label>Device location</label>
    <div class="row">
@@ -238,18 +247,34 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
  <section id="alerts" class="tab">
   <div class="card"><h2>Air Alerts Ukraine</h2>
    <p class="req"><b>Auxiliary display only.</b> Keep official emergency notifications enabled. Data provided by <a href="https://devs.alerts.in.ua/" target="_blank" rel="noopener">alerts.in.ua</a>. When data is stale, missing, or disconnected the device will show NO DATA, never NO ALERT.</p>
-   <div class="chk"><input id="alertsEnabled" type="checkbox"><label>Enable online monitoring</label></div>
+   <div class="chk"><input id="alertsEnabled" type="checkbox"><label>Онлайн-моніторинг тривог</label></div>
+   <div class="chk"><input id="alertsNotify" type="checkbox"><label>Повідомляти про початок і відбій тривоги поверх годинника</label></div>
    <div class="row">
-    <div><label>Region</label><select id="alertsUid"><option value="14">Kyiv Oblast (14)</option><option value="31">Kyiv city (31)</option></select></div>
-    <div><label>Refresh interval (seconds)</label><input id="alertsPollSec" type="number" min="30" max="600"></div>
+    <div><label>Область</label><select id="alertsUid" onchange="alertsRegionChanged()">
+     <option value="14">Київська область</option><option value="31">м. Київ</option>
+     <option value="29">АР Крим</option><option value="8">Волинська область</option>
+     <option value="4">Вінницька область</option><option value="9">Дніпропетровська область</option>
+     <option value="28">Донецька область</option><option value="10">Житомирська область</option>
+     <option value="11">Закарпатська область</option><option value="12">Запорізька область</option>
+     <option value="13">Івано-Франківська область</option><option value="15">Кіровоградська область</option>
+     <option value="16">Луганська область</option><option value="27">Львівська область</option>
+     <option value="17">Миколаївська область</option><option value="18">Одеська область</option>
+     <option value="19">Полтавська область</option><option value="5">Рівненська область</option>
+     <option value="30">м. Севастополь</option><option value="20">Сумська область</option>
+     <option value="21">Тернопільська область</option><option value="22">Харківська область</option>
+     <option value="23">Херсонська область</option><option value="3">Хмельницька область</option>
+     <option value="24">Черкаська область</option><option value="26">Чернівецька область</option>
+     <option value="25">Чернігівська область</option>
+    </select></div>
+    <div><label>Інтервал оновлення (секунд)</label><input id="alertsPollSec" type="number" min="30" max="600"></div>
    </div>
    <small class="hint">To use another district or region, enter its UID from the alerts.in.ua developer documentation via an advanced configuration import.</small>
-   <label>Display label (Latin characters, max 26)</label>
-   <input id="alertsLabel" type="text" maxlength="26" placeholder="KYIV REGION">
-   <small class="hint">SmallTV built-in display font does not include Cyrillic.</small>
-   <label>Personal API token</label>
-   <input id="alertsToken" type="password" autocomplete="new-password" placeholder="(keep saved token)">
-   <div class="chk"><input id="alertsClearToken" type="checkbox"><label>Remove saved token</label></div>
+   <label>Назва області на екрані</label>
+   <input id="alertsLabel" type="text" maxlength="30" placeholder="КИЇВСЬКА ОБЛАСТЬ">
+   <small class="hint">Повідомлення підтримують український шрифт. Використовуйте коротку назву області.</small>
+   <label>Персональний API-токен alerts.in.ua</label>
+   <input id="alertsToken" type="password" autocomplete="new-password" placeholder="(залиште порожнім, щоб не змінювати)">
+   <div class="chk"><input id="alertsClearToken" type="checkbox"><label>Видалити збережений токен</label></div>
    <small class="hint">You can add the token later. Until then, the display shows NO DATA. Tokens remain in device storage and are never returned to this web page. Never save them in GitHub.</small>
    <div style="margin-top:12px"><button class="btn sec" onclick="loadAlertsStatus()">Check online status</button></div>
    <div id="alertsLive" class="req" style="margin-top:12px">Not checked</div>
@@ -499,6 +524,7 @@ var T_BOOL=['showName','showPrice','showChange','showChart','showRangeLabel','sh
 // browser so the firmware carries no tz database (same idea as the cash finder).
 var TZMAP={
  '':'UTC0','UTC':'UTC0',
+ 'Europe/Kyiv':'EET-2EEST,M3.5.0/3,M10.5.0/4',
  'Europe/London':'GMT0BST,M3.5.0/1,M10.5.0','Europe/Dublin':'GMT0IST,M3.5.0/1,M10.5.0',
  'Europe/Lisbon':'WET0WEST,M3.5.0/1,M10.5.0',
  'Europe/Rome':'CET-1CEST,M3.5.0,M10.5.0/3','Europe/Paris':'CET-1CEST,M3.5.0,M10.5.0/3',
@@ -527,7 +553,7 @@ function fillTz(){var s=$('tz');if(!s)return;var keys=Object.keys(TZMAP).filter(
  keys.sort();s.innerHTML='<option value="">UTC</option>'+keys.map(function(k){return '<option value="'+k+'">'+k+'</option>'}).join('');}
 
 var MODEOPT={ticker:'stocks',usage:'usage',radar:'radar',ha:'ha',theme:'theme',alerts:'alerts'};
-var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme',alerts:'carouselAlerts'};
+var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme',alerts:'carouselAlerts',clock:'carouselClock'};
 function hideFeat(name){
  var b=document.querySelector('nav button[data-t="'+name+'"]'); if(b)b.remove();
  var sec=$(name); if(sec)sec.remove();
@@ -586,7 +612,7 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  // clock slice
  fillTz(); var ck=c.clock||{};
  if(ck.tz && !(ck.tz in TZMAP)){var _ts=$('tz'); if(_ts){var _o=document.createElement('option');_o.value=ck.tz;_o.textContent=ck.tz;_ts.appendChild(_o);}}
- sv('tz',ck.tz||''); sv('lang',ck.lang||'en'); sc('nightEnabled',!!ck.nightEnabled);
+ sv('tz',ck.tz||'Europe/Kyiv'); sv('lang',ck.lang||'uk'); sv('clockFace',ck.face||0); sc('nightEnabled',!!ck.nightEnabled);
  sv('nightStart',ck.nightStart||'22:00'); sv('nightEnd',ck.nightEnd||'07:00');
  sv('nightLevel',ck.nightLevel!=null?ck.nightLevel:0); $('nlVal')&&($('nlVal').textContent=(ck.nightLevel!=null?ck.nightLevel:0));
  sv('locLat',ck.lat||''); sv('locLon',ck.lon||'');
@@ -595,14 +621,14 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  $('mode').value=c.mode||'alerts'; modeChanged();
  sv('carouselSec',c.carouselSec||30);
  sc('carouselTicker',c.carouselTicker!==false); sc('carouselUsage',c.carouselUsage!==false); sc('carouselRadar',c.carouselRadar!==false);
- sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false);
+ sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false); sc('carouselClock',c.carouselClock===true);
  // Air Alerts settings. The token itself is intentionally never received.
- sc('alertsEnabled',al.enabled!==false);
+ sc('alertsEnabled',al.enabled!==false);sc('alertsNotify',al.notify!==false);
  var uids=$('alertsUid');
  if(uids){var au=String(al.uid||14); if(!uids.querySelector('option[value="'+au+'"]')){
    var aop=document.createElement('option'); aop.value=au; aop.textContent='Custom UID '+au;uids.appendChild(aop)}
   sv('alertsUid',au)}
- sv('alertsPollSec',al.pollSec||60);sv('alertsLabel',al.label||'KYIV REGION');
+ sv('alertsPollSec',al.pollSec||60);sv('alertsLabel',al.label||'КИЇВСЬКА ОБЛАСТЬ');
  var at=$('alertsToken');if(at)at.placeholder=al.tokenSet?'(saved, leave blank to keep)':'(enter once received)';
  sc('alertsClearToken',false);
  // HA / MQTT slice
@@ -768,7 +794,7 @@ function collect(){
  }
  // Air Alerts slice: an empty token field keeps the saved secret.
  if($('alerts')){
-  var aa={enabled:gc('alertsEnabled'),uid:parseInt(gv('alertsUid'))||14,
+  var aa={enabled:gc('alertsEnabled'),notify:gc('alertsNotify'),uid:parseInt(gv('alertsUid'))||14,
     label:gv('alertsLabel').trim(),pollSec:parseInt(gv('alertsPollSec'))||60};
   var tk=gv('alertsToken').trim();
   if(tk) aa.token=tk;
@@ -783,7 +809,7 @@ function collect(){
   var _hp=gv('haBrokerPass'); if(_hp)_h.brokerPass=_hp; o.ha=_h;}
  // clock slice
  if($('tz')){var _tzn=gv('tz'); var _tzp=(_tzn in TZMAP)?TZMAP[_tzn]:((C.clock&&C.clock.tz===_tzn&&C.clock.tzPosix)?C.clock.tzPosix:'UTC0');
-  o.clock={tz:_tzn,tzPosix:_tzp,lang:gv('lang')||'en',
+  o.clock={tz:_tzn,tzPosix:_tzp,lang:gv('lang')||'uk',face:parseInt(gv('clockFace'))||0,
   nightEnabled:gc('nightEnabled'),nightStart:gv('nightStart')||'22:00',
   nightEnd:gv('nightEnd')||'07:00',nightLevel:parseInt(gv('nightLevel'))||0,
   lat:parseFloat(gv('locLat'))||0,lon:parseFloat(gv('locLon'))||0,
@@ -951,6 +977,11 @@ function radarLine(r){
  return t;
 }
 
+function alertsRegionChanged(){
+ var sel=$('alertsUid');if(!sel)return;
+ var opt=sel.options[sel.selectedIndex];
+ if(opt)sv('alertsLabel',opt.textContent.toLocaleUpperCase('uk-UA'));
+}
 function loadAlertsStatus(){
  var e=$('alertsLive');if(!e)return;
  e.textContent='Checking...';
