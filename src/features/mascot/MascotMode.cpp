@@ -81,70 +81,87 @@ static inline bool rounded(int x,int y,int left,int top,int width,int height,int
 // 0=transparent, 1=body border, 2=blue wing, 3=white shell, 4=navy,
 // 5=gold, 6=grey, 7=cyan highlight, 8=pale-blue face, 9=coral cheek,
 // 10=yellow star, 11=teal. Each frame has two independent rotor/wing poses.
+// Four-point signed-area test, used for elegant swept airplane wings.
+static bool triangle(int x,int y,int ax,int ay,int bx,int by,int cx,int cy){
+  const int32_t s1=(int32_t)(x-ax)*(by-ay)-(int32_t)(y-ay)*(bx-ax);
+  const int32_t s2=(int32_t)(x-bx)*(cy-by)-(int32_t)(y-by)*(cx-bx);
+  const int32_t s3=(int32_t)(x-cx)*(ay-cy)-(int32_t)(y-cy)*(ax-cx);
+  return !((s1<0||s2<0||s3<0)&&(s1>0||s2>0||s3>0));
+}
+static bool quadrilateral(int x,int y,
+                          int ax,int ay,int bx,int by,int cx,int cy,int dx,int dy){
+  return triangle(x,y,ax,ay,bx,by,cx,cy) ||
+         triangle(x,y,ax,ay,cx,cy,dx,dy);
+}
+// A smiling FIXED-WING AIRPLANE: broad swept wings, vertical fin, stabilisers,
+// cockpit canopy, nose cone and wheels. No helicopter/drone rotors.
+// Palette indices: 0 transparent, 1 dark outline, 2 blue aviation body,
+// 3 pearl white, 4 eyes/lines, 5 golden accent, 6 steel, 7 sky highlight,
+// 8 windshield, 9 pink cheeks, 10 happy sparks.
 static uint8_t mascotPixel(int x,int y,uint32_t frame,uint8_t mood,uint16_t speech){
-  if(x<-72||x>72||y<-44||y>45)return 0;
-  const int flap=((frame+mood)%6u<3u)?3:-3;
+  if(x<-79||x>79||y<-51||y>53)return 0;
+  const int flex=((frame+mood)%8u<4u)?2:0;
   const bool blink=((frame/2u+speech)%29u)==0u;
-  const bool grin=((frame+mood)%8u)<6u;
+  const bool grin=((frame+mood)%9u)<7u;
   uint8_t c=0;
-  // Twin little sparkles appear on the happy moods, behind the silhouette.
-  if((mood==1||mood==3)&&frame%5u<3u){
-    if(disc(x,y,62,-35,3)||disc(x,y,-61,31,2))c=10;
+  // Cheerful sparkle never obscures the aircraft silhouette.
+  if((mood==1||mood==3)&&frame%5u<3u&&disc(x,y,74,-30,3))c=10;
+  // Rear horizontal stabilisers, clearly part of the airplane tail.
+  if(quadrilateral(x,y,-48,-29,-12,-34,-12,-22,-45,-20) ||
+     quadrilateral(x,y,12,-34,48,-29,45,-20,12,-22))c=1;
+  if(quadrilateral(x,y,-44,-28,-13,-31,-13,-25,-41,-23) ||
+     quadrilateral(x,y,13,-31,44,-28,41,-23,13,-25))c=7;
+  // Vertical tail fin rising above the cockpit.
+  if(triangle(x,y,-13,-21,0,-50,13,-21))c=1;
+  if(triangle(x,y,-8,-22,0,-44,8,-22))c=2;
+  if(triangle(x,y,-3,-26,0,-41,3,-26))c=5;
+
+  // Signature swept AIRPLANE WINGS: fixed continuous surfaces, *not rotors*.
+  if(quadrilateral(x,y,-77,0,-26,-18,-19,23,-73,25+flex) ||
+     quadrilateral(x,y,26,-18,77,0,73,25+flex,19,23))c=1;
+  if(quadrilateral(x,y,-73,3,-25,-14,-22,19,-70,22+flex) ||
+     quadrilateral(x,y,25,-14,73,3,70,22+flex,22,19))c=2;
+  // Two strong colour stripes and bright outer wing tips.
+  if(quadrilateral(x,y,-71,8,-35,-7,-34,-2,-69,13) ||
+     quadrilateral(x,y,35,-7,71,8,69,13,34,-2))c=7;
+  if(quadrilateral(x,y,-74,9,-67,6,-64,22,-72,23) ||
+     quadrilateral(x,y,67,6,74,9,72,23,64,22))c=5;
+
+  // Oval fuselage and curved windshield: friendly pilot-like eyes.
+  if(rounded(x,y,-34,-30,68,78,23))c=1;
+  if(rounded(x,y,-32,-28,64,75,22))c=2;
+  if(rounded(x,y,-29,-25,58,69,19))c=3;
+  if(ellipse(x,y,0,-9,26,19))c=8;
+  if(ellipse(x,y,-17,-17,7,4)||ellipse(x,y,17,-17,7,4))c=3;
+  if(rounded(x,y,-21,-32,42,9,4))c=1;
+  if(rounded(x,y,-19,-31,38,7,3))c=7;
+  if(rounded(x,y,-10,-29,20,2,1))c=3;
+  if(disc(x,y,0,-31,2))c=5;
+
+  // Blinking eyes + playful eyebrows. Nose/eyes are in the canopy.
+  if(y>=-13&&y<=-11&&((x>=-22&&x<=-10)||(x>=10&&x<=22)))c=2;
+  if(blink) {
+    if(y>=-4&&y<=-2&&((x>=-21&&x<=-12)||(x>=12&&x<=21)))c=4;
+  }else {
+    if(ellipse(x,y,-16,-4,5,7)||ellipse(x,y,16,-4,5,7))c=4;
+    if(disc(x,y,-18,-7,2)||disc(x,y,14,-7,2))c=3;
   }
-  // Soft aviation exhaust / attitude fins near the rear.
-  if(rounded(x,y,-54,10,25,13,5)||rounded(x,y,29,10,25,13,5))c=1;
-  if(rounded(x,y,-50,12,20,8,4)||rounded(x,y,30,12,20,8,4))c=7;
-
-  // Twin winglets. Dark aerodynamic outline + bright upper wing surfaces.
-  if(rounded(x,y,-68,-22-flap,40,17,7)||
-     rounded(x,y,28,-22+flap,40,17,7))c=1;
-  if(rounded(x,y,-65,-20-flap,37,12,6)||
-     rounded(x,y,28,-20+flap,37,12,6))c=2;
-  if(rounded(x,y,-60,-18-flap,19,4,2)||
-     rounded(x,y,41,-18+flap,19,4,2))c=7;
-  // Propeller struts and two-blade rotor discs.
-  if((abs(x+52)<=2 && y>=-37-flap && y<=-25-flap)||
-     (abs(x-52)<=2 && y>=-37+flap && y<=-25+flap))c=6;
-  if((y>=-39-flap&&y<=-37-flap&&abs(x+52)<=17)||
-     (y>=-39+flap&&y<=-37+flap&&abs(x-52)<=17))c=7;
-  if((y==-38-flap && abs(x+52)<=8)||
-     (y==-38+flap && abs(x-52)<=8))c=3;
-
-  // Rounded fuselage has a navy rim, a sky-blue frame and pearl-white face.
-  if(rounded(x,y,-40,-33,80,77,24))c=1;
-  if(rounded(x,y,-38,-31,76,73,22))c=2;
-  if(rounded(x,y,-35,-27,70,65,20))c=3;
-  if(ellipse(x,y,0,-9,31,20))c=8;
-  if(ellipse(x,y,-19,-17,8,5)||ellipse(x,y,19,-17,8,5))c=3;
-  // Bright aircraft visor, central bolt and eyebrow accents.
-  if(rounded(x,y,-23,-34,46,11,5))c=1;
-  if(rounded(x,y,-21,-33,42,8,4))c=7;
-  if(rounded(x,y,-13,-30,26,3,1))c=3;
-  if(disc(x,y,0,-31,3))c=5;
-  if(y>=-14&&y<=-12&&((x>=-26&&x<=-11)||(x>=11&&x<=26)))c=2;
-
-  if(blink){
-    if(y>=-4&&y<=-2&&((x>=-23&&x<=-12)||(x>=12&&x<=23)))c=4;
-  }else{
-    if(ellipse(x,y,-17,-4,6,8)||ellipse(x,y,17,-4,6,8))c=4;
-    if(disc(x,y,-19,-7,2)||disc(x,y,15,-7,2))c=3;
-  }
-  if(ellipse(x,y,-27,12,5,3)||ellipse(x,y,27,12,5,3))c=9;
-  // Mouth reacts even when walking; larger opening on an excited mood.
+  if(ellipse(x,y,-25,12,5,3)||ellipse(x,y,25,12,5,3))c=9;
   if(grin){
-    if(y>=12&&y<=19){
-      const int dy=y-12;
-      if(abs(x)<=10&&y>=15+abs(x)/5)c=4;
-      else if(abs(x)>=9&&abs(x)<=13&&dy>=abs(x)-9&&dy<=7)c=4;
-    }
-  }else if(ellipse(x,y,0,17,12,7)){
+    if(y>=14&&y<=22&&abs(x)<=12 && y>=16+abs(x)/5)c=4;
+    if(y>=19&&y<=21&&abs(x)<=8)c=9;
+  }else if(ellipse(x,y,0,18,10,7)){
     c=4;
-    if(y>=20&&ellipse(x,y,0,22,8,3))c=9;
+    if(y>=21&&ellipse(x,y,0,23,7,3))c=9;
   }
-  // Belly insignia, aviation badge and tiny boots.
-  if(rounded(x,y,-15,32,30,7,3))c=5;
-  if(rounded(x,y,-21,36,14,6,2)||rounded(x,y,7,36,14,6,2))c=1;
-  if(rounded(x,y,-19,37,10,4,2)||rounded(x,y,9,37,10,4,2))c=7;
+  // Pointed aircraft nose cone and central golden badge.
+  if(triangle(x,y,-15,34,0,53,15,34))c=1;
+  if(triangle(x,y,-11,35,0,49,11,35))c=2;
+  if(triangle(x,y,-7,37,0,46,7,37))c=5;
+  if(rounded(x,y,-6,26,12,5,2))c=5;
+  // Two little wheels, each with a dark tyre and silver centre.
+  if(disc(x,y,-25,42,6)||disc(x,y,25,42,6))c=1;
+  if(disc(x,y,-25,42,3)||disc(x,y,25,42,3))c=6;
   return c;
 }
 static uint16_t mascotColor(uint8_t c,uint16_t background) {
@@ -173,34 +190,45 @@ static inline uint8_t spriteAt(int screenX,int screenY,int cx,int cy,
 }
 // Batch consecutive differing pixels into horizontal monochrome palette runs.
 // No framebuffer, fillRect erase, screen flashing or 16-bit canvas allocation.
+// The previous per-row drawFastHLine approach issued thousands of tiny SPI
+// writes and the user saw a travelling top-to-bottom refresh wave.
+// Instead compose the old+new sprite union in a 4-row RGB565 tile and push
+// each tile in ONE bitmap transfer. No blank old frame, no full LCD refresh.
+// 4*240*2 = 1920 B static memory; avoids ESP8266 stack overflow.
 static void drawSpriteDelta(Arduino_GFX* gfx,
                             int x,int y,uint32_t frame,uint8_t mood,
                             int oldX,int oldY,uint32_t oldFrame,uint8_t oldMood,
                             uint16_t serial,bool mini,uint16_t bg) {
   if(!gfx)return;
-  const int rx=mini?49:72,ry=mini?30:45;
+  constexpr int kTileRows=4;
+  static uint16_t tile[240*kTileRows];
+  const int rx=mini?53:79,ry=mini?35:53;
   const int minX=max(0,min(x-rx,oldX>=0?oldX-rx:x-rx));
   const int maxX=min(239,max(x+rx,oldX>=0?oldX+rx:x+rx));
-  const int minY=max(mini?173:23,min(y-ry,oldX>=0?oldY-ry:y-ry));
-  const int maxY=min(mini?225:219,max(y+ry,oldX>=0?oldY+ry:y+ry));
-  uint16_t palette[11];
-  for(uint8_t i=0;i<11;i++)palette[i]=mascotColor(i,bg);
-  for(int row=minY;row<=maxY;row++){
-    int run=-1;uint8_t tone=0;
-    for(int px=minX;px<=maxX+1;px++){
-      uint8_t newer=0,older=0;
-      if(px<=maxX){
-        newer=spriteAt(px,row,x,y,frame,mood,serial,mini);
-        if(oldX>=0)older=spriteAt(px,row,oldX,oldY,oldFrame,oldMood,serial,mini);
-      }
-      if(px<=maxX && newer!=older && (run<0||newer==tone)){
-        if(run<0){run=px;tone=newer;}
-      }else{
-        if(run>=0){gfx->drawFastHLine(run,row,px-run,palette[tone]);run=-1;}
-        if(px<=maxX && newer!=older){run=px;tone=newer;}
+  const int minY=max(mini?173:22,min(y-ry,oldX>=0?oldY-ry:y-ry));
+  const int maxY=min(mini?226:218,max(y+ry,oldX>=0?oldY+ry:y+ry));
+  if(minX>maxX || minY>maxY)return;
+  const int width=maxX-minX+1;
+  for(int top=minY;top<=maxY;top+=kTileRows) {
+    const int height=min(kTileRows,maxY-top+1);
+    bool changed=false;
+    for(int ty=0;ty<height;ty++) {
+      const int sy=top+ty;
+      for(int col=0;col<width;col++){
+        const int sx=minX+col;
+        const uint8_t fresh=spriteAt(sx,sy,x,y,frame,mood,serial,mini);
+        const uint8_t stale=oldX>=0?
+            spriteAt(sx,sy,oldX,oldY,oldFrame,oldMood,serial,mini):0;
+        changed|=fresh!=stale;
+        tile[ty*width+col]=mascotColor(fresh,bg);
       }
     }
-    if((row&15)==0)yield();
+    if(changed) {
+      // Fixed-width color bitmap transfer is many times fewer SPI commands
+      // than one-pixel or multi-run drawing.
+      gfx->draw16bitRGBBitmap(minX,top,tile,width,height);
+    }
+    if((top&15)==0)yield();
   }
 }
 
@@ -324,7 +352,7 @@ void MascotMode::drawSmallCharacter(const Settings& s){
   (void)s;
   const uint32_t frame=millis()/230UL;
   const int bob=(int)((frame+mood_)%5u)-2;
-  const int cx=94+bob,cy=198+((mood_==2&&(frame&1u))?-2:0);
+  const int cx=94+bob,cy=199+((mood_==2&&(frame&1u))?-2:0);
   drawSpriteDelta(gfxDev(),cx,cy,frame,mood_,prevSmallX_,prevSmallY_,
                   prevSmallFrame_,prevSmallMood_,speechSerial_,true,backdrop());
   prevSmallX_=cx;prevSmallY_=cy;
@@ -350,14 +378,14 @@ void MascotMode::drawRoaming(const Settings& s){
   }
   const uint32_t now=millis();
   if(nextAnimationMs_ && (int32_t)(now-nextAnimationMs_)<0)return;
-  nextAnimationMs_=now+220UL; // ~4.5 FPS, no framebuffer needed
-  const uint32_t frame=(now-roamStartMs_)/220UL;
-  const uint32_t dist=((now-roamStartMs_)/160UL*2UL)%404UL;
-  int x=74,y=66;
-  if(dist<92UL)x+=dist;
-  else if(dist<202UL){x=166;y+=(int)(dist-92UL);}
-  else if(dist<294UL){x=166-(int)(dist-202UL);y=176;}
-  else y=176-(int)(dist-294UL);
+  nextAnimationMs_=now+160UL; // ~6 FPS, buffered LCD transfers
+  const uint32_t frame=(now-roamStartMs_)/160UL;
+  const uint32_t dist=((now-roamStartMs_)/190UL*2UL)%360UL;
+  int x=81,y=77;
+  if(dist<78UL)x+=dist;
+  else if(dist<180UL){x=159;y+=(int)(dist-78UL);}
+  else if(dist<258UL){x=159-(int)(dist-180UL);y=179;}
+  else {x=81;y=179-(int)(dist-258UL);}
   if(mood_==2 && (frame%10u)<3u)y-=2; // occasional happy hop
   drawBigCharacter(x,y,frame);
 }
