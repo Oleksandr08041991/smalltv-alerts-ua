@@ -247,7 +247,7 @@ static PlanePose flightPose(uint32_t frame,uint8_t pattern,bool mini) {
     case 12:p.shiftY=(a*c)/80;p.bank=b/2;p.yaw=a/2;break;    // lazy eight
     case 13:p.shiftX=a/3;p.shiftY=d/2;p.bank=c/2;break;      // wave flight
     case 14:p.shiftY=b/2;p.scale+=a/3;p.yaw=c/2;break;       // buoyant jump
-    case 15:p.shiftX=(a>0?12:-12);p.bank=b/2;break;          // side-to-side
+    case 15:p.shiftX=a/3;p.bank=b/2;p.yaw=c/3;break;         // smooth side-to-side
     case 16:p.shiftX=a/3;p.shiftY=b/3;p.yaw=c;p.bank=-b/3;break;// banked arc
     case 17:p.shiftX=c/3;p.shiftY=-a/3;p.bank=b/2;p.scale+=a/3;break;
     case 18:p.shiftY=c/2;p.yaw=b;p.bank=a/3;break;           // corkscrew view
