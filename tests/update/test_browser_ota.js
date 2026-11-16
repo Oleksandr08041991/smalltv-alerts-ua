@@ -6,6 +6,13 @@ const start=html.indexOf('// Browser-assisted GitHub OTA for the ESP8266');
 const end=html.indexOf('// settings backup',start);
 assert(start>=0 && end>start,'browser OTA code missing');
 const script=html.slice(start,end);
+const workflow=fs.readFileSync('.github/workflows/build.yml','utf8');
+const cdnPublish=workflow.indexOf('name: Publish versioned browser OTA image');
+const releasePublish=workflow.indexOf('name: Attach to release');
+assert(cdnPublish>=0 && releasePublish>cdnPublish,
+  'Versioned OTA image must be in the CDN branch before a release becomes latest');
+assert(workflow.includes('firmware/${OTA_TAG}.bin') && workflow.includes('refs/heads/ota'),
+  'The browser firmware path must match the release publisher');
 const elements={
  ghMsg:{textContent:''},ghUpBtn:{disabled:true},
  chkBtn:{disabled:false},fwVer:{textContent:'SmallTV 3.7.2'}
