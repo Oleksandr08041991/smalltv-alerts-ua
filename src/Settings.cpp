@@ -203,7 +203,8 @@ static String minToHhmm(uint16_t v) {
 void ClockSettings::setDefaults() {
   tz            = DEFAULT_TZ_NAME;
   tzPosix       = DEFAULT_TZ_POSIX;
-  lang          = "en";
+  lang          = "uk";
+  face          = 0;
   nightEnabled  = DEFAULT_NIGHT_ENABLED;
   nightStartMin = DEFAULT_NIGHT_START_MIN;
   nightEndMin   = DEFAULT_NIGHT_END_MIN;
@@ -219,6 +220,7 @@ void ClockSettings::toJson(JsonObject o) const {
   o["tz"]           = tz;
   o["tzPosix"]      = tzPosix;
   o["lang"]         = lang;
+  o["face"]         = face;
   o["nightEnabled"] = nightEnabled;
   o["nightStart"]   = minToHhmm(nightStartMin);
   o["nightEnd"]     = minToHhmm(nightEndMin);
@@ -237,8 +239,9 @@ void ClockSettings::fromJson(JsonObjectConst o) {
   if (o["tzPosix"].is<const char*>())     tzPosix = o["tzPosix"].as<String>();
   if (o["lang"].is<const char*>()) {
     const char* code = o["lang"];
-    if (smalltv::languageIndex(code, strlen(code)) >= 0) lang = code;   // an unknown code keeps the old one
+    if (!strcmp(code, "uk") || smalltv::languageIndex(code, strlen(code)) >= 0) lang = code;   // an unknown code keeps the old one
   }
+  if (o["face"].is<int>()) face = constrain((int)o["face"], 0, 3);
   if (o["nightEnabled"].is<bool>())       nightEnabled = o["nightEnabled"];
   if (o["nightStart"].is<const char*>())  nightStartMin = hhmmToMin(o["nightStart"], nightStartMin);
   if (o["nightEnd"].is<const char*>())    nightEndMin   = hhmmToMin(o["nightEnd"], nightEndMin);
@@ -543,6 +546,7 @@ void Settings::setDefaults() {
   carouselSec = DEFAULT_CAROUSEL_SEC;
   carouselTicker = (bool)WITH_TICKER;
   carouselAlerts = true;
+  carouselClock = false;
   carouselUsage = carouselRadar = carouselHa = true;
   carouselTheme = false;   // opt in: needs an installed theme, else the slot shows an error
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
@@ -639,7 +643,8 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
                             : (s.mode == MODE_USAGE)    ? "usage"
                             : (s.mode == MODE_HA)       ? "ha"
                             : (s.mode == MODE_CAROUSEL) ? "carousel"
-                            : (s.mode == MODE_ALERTS)   ? "alerts" : "stocks";
+                            : (s.mode == MODE_ALERTS)   ? "alerts"
+                            : (s.mode == MODE_CLOCK)    ? "clock" : "stocks";
   root["carouselSec"]       = s.carouselSec;
   root["carouselTicker"]    = s.carouselTicker;
   root["carouselUsage"]     = s.carouselUsage;
@@ -647,6 +652,7 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   root["carouselHa"]        = s.carouselHa;
   root["carouselTheme"]     = s.carouselTheme;
   root["carouselAlerts"]    = s.carouselAlerts;
+  root["carouselClock"]     = s.carouselClock;
   root["httpTimeout"]       = s.httpTimeout;
   root["brightness"]        = s.brightness;
   root["autoBrightness"]    = s.autoBrightness;
@@ -719,6 +725,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
            : m.equalsIgnoreCase("usage")    ? MODE_USAGE
            : m.equalsIgnoreCase("ha")       ? MODE_HA
            : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL
+           : m.equalsIgnoreCase("clock")    ? MODE_CLOCK
            : m.equalsIgnoreCase("alerts")   ? MODE_ALERTS
            : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_USAGE)
            : s.mode;   // empty or unknown: a save that names no mode keeps the stored one
@@ -739,6 +746,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   if (root["carouselHa"].is<bool>())      s.carouselHa = root["carouselHa"];
   if (root["carouselTheme"].is<bool>())   s.carouselTheme = root["carouselTheme"];
   if (root["carouselAlerts"].is<bool>())  s.carouselAlerts = root["carouselAlerts"];
+  if (root["carouselClock"].is<bool>())   s.carouselClock = root["carouselClock"];
 
   if (root["httpTimeout"].is<int>())        s.httpTimeout = constrain((int)root["httpTimeout"], 1000, 20000);
   if (root["brightness"].is<int>())         s.brightness = constrain((int)root["brightness"], 0, 100);
