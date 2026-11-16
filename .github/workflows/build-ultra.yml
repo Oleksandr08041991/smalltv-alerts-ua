@@ -165,7 +165,11 @@ jobs:
             git commit -q -m "Browser OTA ${RELEASE_TAG}"
             git push -q origin HEAD:refs/heads/ota
           fi
-      - name: Create release with firmware for in-device OTA
+      # GitHub's integration token can be denied release creation with 403.
+      # The ota branch above is the canonical browser-update channel, so a
+      # denied optional Releases mirror must not block a working firmware.
+      - name: Best-effort GitHub Releases mirror
+        continue-on-error: true
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: |
