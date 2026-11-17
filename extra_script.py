@@ -12,6 +12,14 @@ import sys
 subprocess.check_call([sys.executable, os.path.join(PROJECT_DIR, "tools", "gzip_webui.py")],
                       cwd=PROJECT_DIR)
 
+# SmallTV ESP8266: compile detailed airplane poses ON THE BUILD COMPUTER.
+# The 4-bit asset is stored in PROGMEM, not in the 80 KiB runtime DRAM.
+# The generator executes before the compiler and uses the exact C++ geometry.
+if env["PIOENV"] in ("smalltv", "smalltv_lean"):
+    subprocess.check_call([sys.executable,
+                           os.path.join(PROJECT_DIR, "tools", "generate_plane_atlas.py")],
+                          cwd=PROJECT_DIR)
+
 
 def _tokenize(cmdline):
     # \"-escaped quotes (e.g. ESP8266's ARDUINO_BOARD_ID=\"esp12e\") must become a
