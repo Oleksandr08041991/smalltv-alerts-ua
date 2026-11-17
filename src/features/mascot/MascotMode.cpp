@@ -5,6 +5,9 @@
 #include "UkrText.h"
 #include <Arduino_GFX_Library.h>
 #include <time.h>
+#if defined(SMALLTV_ESP8266)
+#include "PlaneAtlas.generated.h"  // 12 facial/yaw poses in Flash, no RAM cost
+#endif
 
 MascotMode g_mascotMode;
 namespace {
@@ -261,54 +264,89 @@ static PlanePose flightPose(uint32_t frame,uint8_t pattern,bool mini) {
   p.invY=(int16_t)(65536L/p.scale);
   return p;
 }
+// On ESP8266 these exact aircraft pixels are computed at BUILD time by
+// tools/generate_plane_atlas.py. Runtime uses a 4-bit Flash atlas instead of
+// ~40 expensive polygon/ellipse tests for EVERY pixel of EVERY frame.
+static uint32_t frameLayer(uint32_t frame,uint8_t mood,uint16_t speech,int8_t yaw) {
+  const uint8_t turn=yaw<-12?0:(yaw>12?2:1);
+  const uint8_t expression=((frame+mood)%9u)<7u?0:1;
+  const uint8_t closed=((frame/2u+speech)%29u)==0u?0:1;
+  return (uint32_t)(turn*4+expression*2+closed)*9302UL;
+}
+static inline uint8_t aircraftAt(int x,int y,uint32_t frame,uint8_t mood,
+                                 uint16_t speech,int8_t yaw,uint32_t layer) {
+  if(x<-79||x>79||y<-57||y>59)return 0;
+#if defined(SMALLTV_ESP8266)
+  (void)frame;(void)mood;(void)speech;(void)yaw;
+  const uint32_t pixel=(uint32_t)(y+57)*159UL+(uint32_t)(x+79);
+  const uint8_t packed=pgm_read_byte(&planeflash::frames[layer+(pixel>>1)]);
+  return (pixel&1u)?packed&0x0Fu:packed>>4;
+#else
+  (void)layer;
+  return mascotPixel(x,y,frame,mood,speech,yaw);
+#endif
+}
 static inline uint8_t spriteAt(int sx,int sy,int cx,int cy,
                                uint32_t frame,uint8_t mood,uint16_t serial,
-                               const PlanePose& pose) {
+                               const PlanePose& pose,uint32_t layer) {
   if(cx<0)return 0;
   const int dx=sx-cx,dy=sy-cy;
-  // Approximate inverse 3-D banking + perspective with fixed-point integers.
+  // 3-D banking/perspective remains continuous even when sprite geometry
+  // comes from a pre-rendered 4-bit palette atlas.
   const int x=(int32_t)(dx*256-dy*pose.bank)*pose.invX/65536L;
   const int y=(int32_t)(dy*256+dx*pose.bank)*pose.invY/65536L;
-  return mascotPixel(x,y,frame,mood,serial,pose.yaw);
+  return aircraftAt(x,y,frame,mood,serial,pose.yaw,layer);
 }
-// Persistent 4-row RGB565 staging tile; no full-screen erase between frames.
-// Render the union of the old/new positions as a composite BEFORE sending it.
+// Dirty tile compositor: only changed portions of the aircraft are uploaded.
+// Before: 4-row *full-width* strips (often 70-90KB of SPI data per frame),
+// giving a slow wave from the top of the ST7789 display to the bottom.
+// Now: skip unchanged 24x12 tiles entirely, update changed tiles atomically.
+// An RGB565 tile is 24*12*2 = 576 bytes (vs old 1920-byte line buffer).
 static void drawSpriteDelta(Arduino_GFX* gfx,
                             int x,int y,uint32_t frame,uint8_t mood,
                             int oldX,int oldY,uint32_t oldFrame,uint8_t oldMood,
                             uint16_t serial,bool mini,uint16_t bg,
                             uint8_t pattern=0) {
   if(!gfx)return;
-  constexpr int kTileRows=4;
-  static uint16_t tile[240*kTileRows];
+  constexpr int kTileRows=12,kTileCols=24;
+  static uint16_t tile[kTileRows*kTileCols];
   const PlanePose freshPose=flightPose(frame,pattern,mini);
   const PlanePose oldPose=flightPose(oldFrame,pattern,mini);
-  // Convert the palette once per frame, not for every one of 40,000+ pixels.
+  const uint32_t freshLayer=frameLayer(frame,mood,serial,freshPose.yaw);
+  const uint32_t oldLayer=frameLayer(oldFrame,oldMood,serial,oldPose.yaw);
   uint16_t palette[14];
   for(uint8_t i=0;i<14;i++)palette[i]=mascotColor(i,bg);
+
   const int rx=mini?40:109,ry=mini?30:78;
   const int minX=max(0,min(x-rx,oldX>=0?oldX-rx:x-rx));
   const int maxX=min(239,max(x+rx,oldX>=0?oldX+rx:x+rx));
   const int minY=max(mini?173:21,min(y-ry,oldX>=0?oldY-ry:y-ry));
   const int maxY=min(mini?226:218,max(y+ry,oldX>=0?oldY+ry:y+ry));
   if(minX>maxX||minY>maxY)return;
-  const int width=maxX-minX+1;
+
   for(int top=minY;top<=maxY;top+=kTileRows) {
     const int height=min(kTileRows,maxY-top+1);
-    bool changed=false;
-    for(int ty=0;ty<height;ty++) {
-      const int py=top+ty;
-      for(int col=0;col<width;col++) {
-        const int px=minX+col;
-        const uint8_t fresh=spriteAt(px,py,x,y,frame,mood,serial,freshPose);
-        const uint8_t stale=oldX>=0?
-            spriteAt(px,py,oldX,oldY,oldFrame,oldMood,serial,oldPose):0;
-        changed|=fresh!=stale;
-        tile[ty*width+col]=palette[fresh<14?fresh:0];
+    for(int left=minX;left<=maxX;left+=kTileCols) {
+      const int width=min(kTileCols,maxX-left+1);
+      bool changed=false;
+      for(int row=0;row<height;row++) {
+        const int py=top+row;
+        for(int col=0;col<width;col++) {
+          const int px=left+col;
+          const uint8_t fresh=spriteAt(px,py,x,y,frame,mood,serial,
+                                        freshPose,freshLayer);
+          const uint8_t stale=oldX>=0?
+              spriteAt(px,py,oldX,oldY,oldFrame,oldMood,serial,
+                       oldPose,oldLayer):0;
+          changed|=fresh!=stale;
+          tile[row*width+col]=palette[fresh<14?fresh:0];
+        }
       }
+      // Never send unchanged pixels to SPI. Updating narrow blocks avoids
+      // visible travelling scanline wipes and cuts the transferred bytes.
+      if(changed)gfx->draw16bitRGBBitmap(left,top,tile,width,height);
     }
-    if(changed)gfx->draw16bitRGBBitmap(minX,top,tile,width,height);
-    if(((top-minY)&15)==0)yield();
+    yield(); // WDT-safe even on a heavily loaded Wi-Fi ESP8266.
   }
 }
 
@@ -467,8 +505,8 @@ void MascotMode::drawRoaming(const Settings& s){
   }
   const uint32_t now=millis();
   if(nextAnimationMs_ && (int32_t)(now-nextAnimationMs_)<0)return;
-  nextAnimationMs_=now+180UL; // ~5.5 FPS, larger RGB565 airplane tiles
-  const uint32_t frame=(now-roamStartMs_)/180UL;
+  nextAnimationMs_=now+90UL; // target ~11 FPS; measured elapsed time skips missed frames
+  const uint32_t frame=(now-roamStartMs_)/90UL;
   const PlanePose pose=flightPose(frame,motionVariant_,false);
   // The standalone plane now fills ~210 pixels of the 240-pixel display.
   // Keep its enlarged wings, fin and nose entirely inside the LCD.
@@ -480,7 +518,7 @@ void MascotMode::renderOverlay(const Settings& s){
   if(!painted_)drawSpeechFrame(s);
   if(!nextAnimationMs_ || (int32_t)(millis()-nextAnimationMs_)>=0){
     drawSmallCharacter(s);
-    nextAnimationMs_=millis()+230UL;
+    nextAnimationMs_=millis()+120UL;
   }
 }
 void MascotMode::service(const Settings& s){
