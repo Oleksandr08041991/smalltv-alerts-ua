@@ -62,6 +62,31 @@ struct TickerSettings {
   void fromJson(JsonObjectConst o);   // applies only the keys present
 };
 
+// ---- Ukraine air-alerts mode ------------------------------------------------
+struct AlertsSettings {
+  bool enabled;
+  bool notify;          // show popup on start and end of alert
+  uint16_t uid;         // alerts.in.ua region UID (14 = Kyiv Oblast)
+  String label;         // ASCII display label; GFX built-in font is not Cyrillic
+  String token;         // API bearer token, persisted only, not returned to web UI
+  uint16_t pollSec;     // 30..600, 60 by default
+  void setDefaults();
+  void toJson(JsonObject o, bool includeSecrets) const;
+  void fromJson(JsonObjectConst o);
+};
+
+// ---- Animated Ukrainian aviation mascot ------------------------------------
+struct MascotSettings {
+  bool enabled;
+  uint16_t intervalMin;    // popups over the clock every 5..240 minutes
+  uint16_t speechSec;      // mascot quote screen and carousel quote: 10..300 sec
+  uint16_t roamSec;        // standalone mascot wandering time: 5..180 sec
+  uint8_t focus;           // 0 mixed, 1 business, 2 life
+  void setDefaults();
+  void toJson(JsonObject o) const;
+  void fromJson(JsonObjectConst o);
+};
+
 // ---- Claude usage feature slice -------------------------------------------
 struct UsageSettings {
   String   usageUrl;      // daemon HTTP endpoint, e.g. http://192.168.1.10:8787/
@@ -77,6 +102,7 @@ struct UsageSettings {
 struct ClockSettings {
   String   tz;            // IANA display name, e.g. "Europe/Rome" (UI round-trip)
   String   tzPosix;       // POSIX TZ rule the device feeds SNTP
+  uint8_t  face;         // 0 digital, 1 analog, 2 dashboard, 3 retro, 4 altimeter
   String   lang;          // device language code (en, pt, es, fr, de, it); picks the names theme clocks show
   bool     nightEnabled;  // dim/blank on a nightly schedule
   uint16_t nightStartMin; // minutes since local midnight (0..1439)
@@ -220,7 +246,7 @@ struct Settings {
 
   // --- Carousel (mode == MODE_CAROUSEL): dwell + which features rotate ---
   uint16_t carouselSec;
-  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme;
+  bool carouselTicker, carouselUsage, carouselRadar, carouselHa, carouselTheme, carouselAlerts, carouselClock, carouselMascot;
 
   // --- Shared HTTP / display ---
   uint16_t httpTimeout; // ms
@@ -230,7 +256,11 @@ struct Settings {
   uint8_t  rotation;          // 0..3 screen orientation
 
   // --- Feature slices ---
+#if WITH_TICKER
   TickerSettings  ticker;
+#endif
+  AlertsSettings  alerts;
+  MascotSettings  mascot;
   UsageSettings   usage;
   RadarSettings   radar;
   HaSettings      ha;        // MQTT broker for HA screens

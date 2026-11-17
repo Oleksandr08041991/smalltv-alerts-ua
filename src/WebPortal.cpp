@@ -9,7 +9,12 @@
 #include "Net.h"
 #include "Gfx.h"
 #include "OtaUpdate.h"
+#if WITH_ALERTS
+#include "AlertsMode.h"
+#endif
+#if WITH_TICKER
 #include "StockClient.h"
+#endif
 #include "UsageClient.h"
 #if WITH_RADAR
 #include "RadarClient.h"
@@ -131,6 +136,8 @@ static void handleGetConfig() {
   // Which features are compiled in (so a lean build hides the tabs it dropped).
   JsonObject feat = root["features"].to<JsonObject>();
   feat["ticker"] = (bool)WITH_TICKER;
+  feat["alerts"] = (bool)WITH_ALERTS;
+  feat["mascot"] = (bool)WITH_MASCOT;
   feat["usage"]  = (bool)WITH_USAGE;
   feat["radar"]  = (bool)WITH_RADAR;
   feat["ha"]     = (bool)WITH_HA;
@@ -439,6 +446,21 @@ static void handleImport() {
   scheduleReboot(800);
 }
 
+#if WITH_ALERTS
+// No API credentials are returned. Token settings are stored only on device.
+static void handleAlertsStatus() {
+  if (!requireAuth()) return;
+  JsonDocument doc;
+  doc["status"] = String(g_alertsMode.status());
+  doc["fresh"] = g_alertsMode.fresh(*S);
+  doc["lastOkAgeSec"] = g_alertsMode.ageSec();
+  doc["http"] = g_alertsMode.lastHttp();
+  doc["message"] = g_alertsMode.error();
+  doc["uid"] = S->alerts.uid;
+  sendJson(doc);
+}
+#endif
+
 static void handleRefresh() {
   if (!requireAuth()) return;
 #if WITH_TICKER
@@ -481,6 +503,9 @@ static void handleHaClear() {
 // Check the newest GitHub release against the running version.
 static void handleCheckUpdate() {
   if (!requireAuth()) return;
+  // Release transient graphics allocations so the HTTPS check has a
+  // sufficiently large contiguous BearSSL buffer on ESP8266.
+  appRelease();
   OtaLatest r = otaCheckLatest(*S);
   JsonDocument doc;
   JsonObject o = doc.to<JsonObject>();
@@ -626,6 +651,10 @@ static void handleUpdateUpload() {
     return;
   }
   if (up.status == UPLOAD_FILE_START) {
+    // Free rebuildable UI allocations before reserving the 4KB flash-write
+    // buffer. Browser-assisted OTA uses this same endpoint, but never opens
+    // a large TLS session on the ESP8266 itself.
+    appRelease();
 #if defined(SMALLTV_FAMILY_ESP8266)
     WiFiUDP::stopAll();   // free UDP sockets so the OTA has max contiguous flash/heap
     g_updateRefused = false;
@@ -684,6 +713,9 @@ void webPortalBegin(Settings& settings) {
   server.on("/api/config", HTTP_GET, handleGetConfig);
   server.on("/api/config", HTTP_POST, handlePostConfig);
   server.on("/api/status", HTTP_GET, handleStatus);
+#if WITH_ALERTS
+  server.on("/api/alerts/status", HTTP_GET, handleAlertsStatus);
+#endif
   server.on("/api/scan", HTTP_GET, handleScan);
   server.on("/api/reboot", HTTP_POST, handleReboot);
   server.on("/api/factory", HTTP_POST, handleFactory);
@@ -729,15 +761,14 @@ void webPortalLoop() {
   if (g_selfUpdate) {
     g_selfUpdate = false;
 #if defined(SMALLTV_FAMILY_ESP8266)
-    // RAM-tight chip: verify there is something to install, then queue the
-    // download for the next boot (otaBootUpdate in setup(), ~45 KB free) and
-    // reboot. A failure there lands back in g_updateMsg via otaTakeBootResult.
-    OtaLatest r = otaCheckLatest(*S);
-    if (!r.ok)         g_updateMsg = "check failed: " + r.error;
-    else if (!r.newer) g_updateMsg = "already up to date (" FW_VERSION ")";
-    else if (otaRequestBootUpdate(r.tag.c_str())) {
+    // The original flow ran a full TLS GitHub check in a memory-fragmented
+    // runtime, often failing with "not enough heap" before it even queued OTA.
+    // Queue the operation with a tiny LittleFS marker, then reboot and check +
+    // download before graphics/web feature allocations. This is an intentional
+    // user action; no background update or unsolicited restart.
+    if (otaRequestBootUpdate("latest")) {
       g_updateMsg = "updating...";
-      scheduleReboot(400);
+      scheduleReboot(500);
     } else {
       g_updateMsg = F("could not queue update (storage error)");
     }

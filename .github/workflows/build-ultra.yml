@@ -1,0 +1,187 @@
+name: Build SmallTV Ultra
+on:
+  push:
+    branches: [feature/air-alerts-slim]
+    tags: ['v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  esp8266:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PlatformIO
+        run: python -m pip install platformio==6.1.19
+      - name: Generate web interface
+        run: |
+          python tools/gzip_webui.py
+          python tools/gzip_webui.py --check
+      # Publishing a GitHub Release is the explicit OTA deployment gate.
+      # The tag must match the version compiled into the binary; never
+      # release an image with another version under a misleading name.
+      - name: Check intended OTA release version matches built image
+        if: "startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.head_commit.message, 'release: v')"
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          cfg = pathlib.Path("src/config.h").read_text()
+          match = re.search(r'^#define\s+FW_VERSION\s+"(\d+\.\d+\.\d+)"', cfg, re.M)
+          if not match: raise SystemExit("FW_VERSION is not x.y.z")
+          expected = "v" + match.group(1)
+          if os.environ["RELEASE_REF"].startswith("refs/tags/v"):
+              tag = os.environ["RELEASE_REF"].removeprefix("refs/tags/")
+          else:
+              m = re.fullmatch(r"release: (v\d+\.\d+\.\d+)", os.environ["RELEASE_MESSAGE"].strip())
+              if not m: raise SystemExit("Expected a single release: vX.Y.Z commit subject")
+              tag = m.group(1)
+          if tag != expected:
+              raise SystemExit(f"Requested release {tag} differs from firmware {expected}")
+          print(f"Verified OTA release {expected}")
+          PY
+      - name: Check display redraw regressions
+        run: node tests/alerts/test_display_refresh.js
+      - name: Generate and verify Flash airplane atlas
+        run: |
+          python tools/generate_plane_atlas.py
+          python tools/generate_plane_atlas.py --check
+      - name: Check aviation mascot, white oblast map and OTA
+        run: node tests/mascot/test_aviation_release.js
+      - name: Test manual and browser-assisted firmware updates
+        run: |
+          bash tests/update/run.sh
+          node tests/update/test_browser_ota.js
+      - name: Build SmallTV Ultra firmware and one-time loader
+        run: pio run -e smalltv -e smalltv_loader
+      - name: Verify OTA firmware size and stage files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          slot=1044464
+          files={"smalltv-mod-firmware.bin":Path(".pio/build/smalltv/firmware.bin"),
+                 "smalltv-mod-loader.bin":Path(".pio/build/smalltv_loader/firmware.bin")}
+          out=Path("dist"); out.mkdir(exist_ok=True)
+          for name,path in files.items():
+              size=path.stat().st_size
+              free=slot-size
+              print(f"{name}: {size:,} bytes, free OTA slot: {free:,} bytes ({free/slot:.1%})")
+              if free < 8192:
+                  raise SystemExit(f"OTA slot headroom too low: {name}")
+              shutil.copy2(path,out/name)
+          PY
+      - name: Upload verified ESP8266 binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: smalltv-ultra-air-alerts
+          path: dist/*.bin
+          if-no-files-found: error
+          retention-days: 30
+
+  # A green ESP8266 build on a deliberately created version tag is promoted
+  # into an actual GitHub Release. The firmware's /releases/latest API looks
+  # here (NOT at Actions artifacts). No release on ordinary branch pushes.
+  publish:
+    # A deliberately named "release: vX.Y.Z" push promotes a verified
+    # branch build. Ordinary code changes only create test artifacts.
+    if: "startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release: v'))"
+    needs: esp8266
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified ESP8266 images
+        uses: actions/download-artifact@v4
+        with:
+          name: smalltv-ultra-air-alerts
+          path: dist
+      - name: Check required OTA asset exists
+        run: |
+          test -s dist/smalltv-mod-firmware.bin
+          test -s dist/smalltv-mod-loader.bin
+      - name: Resolve release tag
+        id: release_tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python - <<'PY'
+          import os,re
+          ref=os.environ["RELEASE_REF"]
+          if ref.startswith("refs/tags/v"):
+              tag=ref.removeprefix("refs/tags/")
+          else:
+              m=re.fullmatch(r"release: (v\d+\.\d+\.\d+)",os.environ["RELEASE_MESSAGE"].strip())
+              if not m: raise SystemExit("Invalid explicit OTA release commit")
+              tag=m.group(1)
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+              f.write("tag="+tag+"\n")
+          print("Publishing",tag)
+          PY
+      # Publish the same verified image to a GitHub branch that browser CDNs
+      # can fetch via CORS. GitHub *Release assets* themselves lack CORS headers
+      # on the CDN, so device-web-UI browser fetches cannot use those assets.
+      - name: Publish CORS-friendly browser OTA firmware branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          test -s dist/smalltv-mod-firmware.bin
+          install -d "$RUNNER_TEMP/browser-ota"
+          cd "$RUNNER_TEMP/browser-ota"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads origin ota > /dev/null; then
+            git fetch -q --depth=1 origin ota
+            git checkout -q -b ota FETCH_HEAD
+          else
+            git checkout -q -b ota
+          fi
+          mkdir -p firmware
+          cp "${GITHUB_WORKSPACE}/dist/smalltv-mod-firmware.bin" "firmware/${RELEASE_TAG}.bin"
+          python - <<'PY'
+          import hashlib,json,os,pathlib
+          tag=os.environ["RELEASE_TAG"]
+          data=pathlib.Path("firmware",tag+".bin").read_bytes()
+          if len(data)<300000 or data[0]!=0xE9:
+              raise SystemExit("Not a valid ESP8266 firmware image")
+          sha=hashlib.sha256(data).hexdigest()
+          manifest={"version":tag,"file":"firmware/"+tag+".bin","size":len(data),"sha256":sha}
+          pathlib.Path("latest.json").write_text(json.dumps(manifest,ensure_ascii=False))
+          pathlib.Path("firmware",tag+".json").write_text(json.dumps(manifest,ensure_ascii=False))
+          print("Published",tag,len(data),sha)
+          PY
+          git add "firmware/${RELEASE_TAG}.bin" "firmware/${RELEASE_TAG}.json" latest.json
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Browser OTA ${RELEASE_TAG}"
+            git push -q origin HEAD:refs/heads/ota
+          fi
+      # GitHub's integration token can be denied release creation with 403.
+      # The ota branch above is the canonical browser-update channel, so a
+      # denied optional Releases mirror must not block a working firmware.
+      - name: Best-effort GitHub Releases mirror
+        continue-on-error: true
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+        with:
+          files: |
+            dist/smalltv-mod-firmware.bin
+            dist/smalltv-mod-loader.bin
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          draft: false
+          prerelease: false

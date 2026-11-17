@@ -42,3 +42,6 @@ dependencies.lock
 
 # manual quotes-branch staging dir (see .github/scripts/fetch-quotes.mjs)
 /out/
+
+# Generated 4-bit palette atlas (regenerated from MascotMode.cpp before ESP8266 build)
+src/features/mascot/PlaneAtlas.generated.h

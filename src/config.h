@@ -13,12 +13,12 @@
 // Firmware identity
 // ---------------------------------------------------------------------------
 #define FW_NAME     "smalltv-mod"
-#define FW_VERSION  "3.6.0"
+#define FW_VERSION  "3.7.6"
 
 // Project / update references (shown in the web UI; used by the GitHub self-update)
-#define REPO_URL      "https://github.com/giovi321/smalltv-mod"
-#define REPO_OWNER    "giovi321"
-#define REPO_NAME     "smalltv-mod"
+#define REPO_URL      "https://github.com/Oleksandr08041991/smalltv-alerts-ua"
+#define REPO_OWNER    "Oleksandr08041991"
+#define REPO_NAME     "smalltv-alerts-ua"
 // Release asset the GitHub self-updater pulls, and the short variant name shown
 // in the web UI. One app image per target, plus a second one for the two boards
 // that ship a stripped or extended build of the same hardware: the ESP8266
@@ -141,8 +141,11 @@
 #define MODE_CAROUSEL  3
 #define MODE_NOTIFY    4             // transient overlay: armed over HTTP, never persisted
 #define MODE_THEME     6             // declarative installed clock faces
-#define MODE_HA        5             // Home Assistant screens pushed over MQTT
-#define DEFAULT_MODE MODE_STOCKS
+#define MODE_HA        5
+#define MODE_ALERTS    7             // air alerts Ukraine
+#define MODE_CLOCK     8             // built-in clock faces
+#define MODE_MASCOT    9             // animated aviation friend and quotes
+#define DEFAULT_MODE MODE_CLOCK
 #define DEFAULT_CAROUSEL_SEC 30      // per-mode dwell in carousel
 
 // ---------------------------------------------------------------------------
@@ -253,6 +256,12 @@
 // omits that feature's module from the registry and its web UI section.
 // (WITH_RADAR ships off until the radar module lands.)
 // ---------------------------------------------------------------------------
+#ifndef WITH_MASCOT
+#define WITH_MASCOT 1
+#endif
+#ifndef WITH_ALERTS
+#define WITH_ALERTS 1
+#endif
 #ifndef WITH_TICKER
 #define WITH_TICKER 1
 #endif
@@ -411,8 +420,8 @@
 // --- Clock / night mode (device-wide) ---
 #define NTP_SERVER1             "pool.ntp.org"
 #define NTP_SERVER2             "time.nist.gov"
-#define DEFAULT_TZ_NAME         ""        // IANA display name; empty = UTC
-#define DEFAULT_TZ_POSIX        "UTC0"    // POSIX TZ rule the device feeds SNTP
+#define DEFAULT_TZ_NAME         "Europe/Kyiv"  // Kyiv local time including DST
+#define DEFAULT_TZ_POSIX        "EET-2EEST,M3.5.0/3,M10.5.0/4"
 #define DEFAULT_NIGHT_ENABLED   false
 #define DEFAULT_NIGHT_START_MIN 1320      // 22:00
 #define DEFAULT_NIGHT_END_MIN   420       // 07:00

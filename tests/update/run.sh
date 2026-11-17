@@ -11,4 +11,5 @@ c++ -std=c++11 -Wall -Wextra -Werror -g -Isrc \
 /tmp/smalltv-update-buffer-tests
 node tests/update/test_webui.js
 node tests/update/test_wiring.js
+node tests/update/test_browser_ota.js
 echo "update tests: all passed"

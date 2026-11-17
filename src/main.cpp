@@ -18,6 +18,10 @@
 #include "OtaUpdate.h"
 #include "Mode.h"
 #include "Clock.h"
+#if WITH_MASCOT
+#include "features/mascot/MascotMode.h"
+#endif
+#include "features/clock/ClockFaceMode.h"
 #include "SunTimes.h"
 #include "WgClient.h"
 #if WITH_THEME
@@ -29,6 +33,9 @@
 
 #if WITH_TICKER
 #include "TickerMode.h"
+#endif
+#if WITH_ALERTS
+#include "AlertsMode.h"
 #endif
 #if WITH_USAGE
 #include "UsageMode.h"
@@ -46,6 +53,13 @@
 // The compiled-in features, in display order. main.cpp holds no per-feature
 // state of its own — each mode owns its fetch/render/dirty tracking.
 static DisplayMode* kModes[] = {
+  &g_clockFaceMode,
+#if WITH_MASCOT
+  &g_mascotMode,
+#endif
+#if WITH_ALERTS
+  &g_alertsMode,
+#endif
 #if WITH_TICKER
   &g_tickerMode,
 #endif
@@ -73,8 +87,11 @@ static bool     g_carPaused = false;   // button paused the auto-rotation (stays
 
 static bool carouselHas(const Settings& s, const DisplayMode* m) {
   switch (m->modeConst()) {
+    case MODE_CLOCK:  return s.carouselClock;
+    case MODE_MASCOT: return s.carouselMascot;
     case MODE_STOCKS: return s.carouselTicker;
     case MODE_USAGE:  return s.carouselUsage;
+    case MODE_ALERTS: return s.carouselAlerts;
     case MODE_RADAR:  return s.carouselRadar;
 #if WITH_HA
     case MODE_HA:     return s.carouselHa;
@@ -137,7 +154,11 @@ static uint8_t appEffectiveBrightness() {
   BrightnessInputs in = {};
   // A button wake press briefly lifts the screen to the manual level so a touch
   // reveals it even when night mode has dimmed or blanked the backlight.
-  in.wake = g_btnWakeUntil && millis() < g_btnWakeUntil;
+  in.wake = (g_btnWakeUntil && millis() < g_btnWakeUntil)
+#if WITH_ALERTS
+       || g_alertsMode.overlayActive()
+#endif
+       ;
   in.sliderPct = g_settings.brightness;
   in.nightActive = clockNightActive();
   in.nightPct = g_settings.clock.nightLevel;
@@ -346,31 +367,25 @@ void setup() {
   Serial.println("[boot] net");
   netAllowRetry(!g_safeMode);   // a retry's reboot would clear the crash flag
   netBegin(g_settings, bootProgress);
-  // Arm SNTP now that WiFi (STA) is up — but only if night mode is enabled, so a
-  // ticker-only device doesn't pay the SNTP heap cost (which can starve the cash.ch
-  // TLS handshake on the ESP8266). clockReapply arms it iff needed. Skipped after a
-  // crash so a fault in here can't boot-loop before the web server starts (the
-  // device then comes up in safe mode, OTA-recoverable, instead of needing UART).
-  // ...unless a WireGuard tunnel is configured, which needs the clock and only
-  // exists on an ESP32 where the heap argument for the skip does not apply.
-  if (!g_safeMode || wgNeedsClock(g_settings)) clockReapply(g_settings);
-
-  // Optional WireGuard tunnel (ESP32 targets). Arms the state machine only;
-  // the bring-up itself runs from loop(), so nothing here can delay the web
-  // server. A crash last boot feeds the three-strikes hold that keeps a bad
-  // tunnel config from locking the device out of its own web UI.
-  wgBegin(g_settings, g_safeMode);
-
-  // A GitHub update queued from the web UI runs now, before the features claim
-  // the heap (the download needs a 16 KB TLS buffer that only fits at boot).
-  // On success it reboots into the new image; a no-op stub on the ESP32 targets.
+  // OTA gets first access to the contiguous heap right after Wi-Fi joins:
+  // SNTP and optional tunnel setup happen only AFTER this completes.
+  // ESP8266 requires a 16KB HTTPS CDN receive buffer; initializing other
+  // network services first was a cause of "not enough heap" at update time.
+  // The request is one-shot and consumed by otaBootUpdate(), preventing loops.
   if (otaBootRequested()) {
     Serial.println("[boot] github update");
     gfxBoot("SmallTV", "updating...");
     otaBootUpdate(g_settings);
-    gfxBoot("SmallTV", "update failed");   // still here -> failed; details in the web UI
+    gfxBoot("SmallTV", "update failed"); // on success OTA reboots automatically
     delay(1200);
   }
+
+  // Arm SNTP after the critical OTA memory window. Normal firmware time and
+  // night-mode behaviour are otherwise unchanged.
+  if (!g_safeMode || wgNeedsClock(g_settings)) clockReapply(g_settings);
+
+  // WireGuard is not compiled for our ESP8266; unchanged for larger boards.
+  wgBegin(g_settings, g_safeMode);
 
   Serial.println("[boot] web");
   webPortalBegin(g_settings);
@@ -456,6 +471,15 @@ void loop() {
   }
 #endif
 
+  // --- STA mode: background air-alert monitoring is independent of the selected screen ---
+#if WITH_ALERTS
+  g_alertsMode.poll(g_settings);
+#endif
+
+#if WITH_MASCOT
+  g_mascotMode.tick(g_settings,g_settings.mode==MODE_MASCOT);
+#endif
+
   // --- STA mode: the active feature fetches + renders itself ---
 
   // Night-mode state machine (NTP-trust gate), then apply the effective brightness
@@ -484,9 +508,35 @@ void loop() {
   const bool restore = false;
 #endif
 
+#if WITH_ALERTS
+  static bool alertWasOnScreen = false;
+  if (g_alertsMode.overlayActive()) {
+    alertWasOnScreen = true;
+    g_alertsMode.renderOverlay(g_settings);
+    delay(5);
+    return;
+  }
+  const bool alertFinished = alertWasOnScreen;
+  alertWasOnScreen = false;
+#else
+  const bool alertFinished = false;
+#endif
+#if WITH_MASCOT
+  static bool mascotWasOnScreen=false;
+  if(g_mascotMode.overlayActive()){
+    mascotWasOnScreen=true;
+    g_mascotMode.renderOverlay(g_settings);
+    delay(5);
+    return;
+  }
+  const bool mascotFinished=mascotWasOnScreen;
+  mascotWasOnScreen=false;
+#else
+  const bool mascotFinished=false;
+#endif
   DisplayMode* m = activeMode(g_settings);
   if (m) {
-    if (restore) m->wake(g_settings);
+    if (restore || alertFinished || mascotFinished) m->wake(g_settings);
     m->service(g_settings);
   }
 

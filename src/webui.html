@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -53,123 +53,139 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 <body>
 <header><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="13" width="50" height="38" rx="6"/><polyline points="15,38 23,30 30,34 37,22 44,28 50,20"/><path d="M24 51v6M40 51v6M20 57h8M36 57h8"/></g></svg><span id="dot" class="dot"></span><h1>SmallTV</h1><span id="chip" class="chip" style="display:none"></span><span id="hi" class="muted"></span></header>
 <nav>
- <button data-t="status" class="active">Status</button>
- <button data-t="wifi">WiFi</button>
- <button data-t="display">Display</button>
- <button data-t="ticker">Ticker</button>
+ <button data-t="status" class="active">Стан</button>
+ <button data-t="wifi">Wi-Fi</button>
+ <button data-t="display">Екран</button>
+ <button data-t="alerts">Тривоги</button>
+ <button data-t="mascot">Авіадруг</button>
+ <button data-t="ticker">Біржа</button>
  <button data-t="usage">Clawdmeter</button>
- <button data-t="radar">Radar</button>
+ <button data-t="radar">Радар</button>
  <button data-t="ha">Home Assistant</button>
- <button data-t="update">System</button>
+ <button data-t="update">Система</button>
 </nav>
 <main>
  <!-- STATUS -->
  <section id="status" class="tab active">
-  <div class="card"><h2>Device</h2><div id="statusBox" class="muted">Loading...</div></div>
+  <div class="card"><h2>Пристрій</h2><div id="statusBox" class="muted">Завантаження...</div></div>
  </section>
 
  <!-- WIFI -->
  <section id="wifi" class="tab">
-  <div class="card"><h2>Saved networks</h2>
+  <div class="card"><h2>Збережені мережі</h2>
    <button class="btn sec" onclick="scan()">Scan networks</button>
    <div id="scanList"></div>
    <table id="wifiTable"></table>
    <button class="btn sec" style="margin-top:10px" onclick="addWifi()">+ Add network</button>
-   <div style="margin-top:14px"><button class="btn" onclick="saveWifi()">Save &amp; connect (reboots)</button></div>
+   <div style="margin-top:14px"><button class="btn" onclick="saveWifi()">Зберегти й підключитися</button></div>
    <small class="hint">2.4&nbsp;GHz only. Up to 4 networks; at boot the device joins the strongest one it can see. Tap a scan result to fill a row. Leave a password blank to keep the stored one.</small>
   </div>
-  <div class="card"><h2>Device name</h2>
-   <label>Hostname</label><input id="hostname" type="text" placeholder="smalltv">
+  <div class="card"><h2>Назва пристрою</h2>
+   <label>Ім'я в мережі</label><input id="hostname" type="text" placeholder="smalltv">
    <small class="hint">Reachable as <code>http://&lt;hostname&gt;.local</code> via mDNS. Running several SmallTVs? Give each its own name (<code>smalltv-desk</code>, <code>smalltv-shelf</code>) so browsers and the clawdmeter daemon's <code>--push-to</code> reach the right device. Saving a new name reboots the device.</small>
   </div>
   <div class="card" id="wgCard"><h2>WireGuard VPN</h2>
    <div id="wgStatus" class="muted" style="margin-bottom:10px">-</div>
-   <div class="chk"><input id="wgEnabled" type="checkbox"><label>Enable the tunnel</label></div>
-   <label>This device's private key</label>
+   <div class="chk"><input id="wgEnabled" type="checkbox"><label>Увімкнути VPN</label></div>
+   <label>Приватний ключ пристрою</label>
    <input id="wgPrivateKey" type="password" autocomplete="off" placeholder="(unchanged)">
-   <label>Peer public key</label>
+   <label>Публічний ключ сервера</label>
    <input id="wgPeerPublicKey" type="text" autocomplete="off" placeholder="server public key">
    <div class="row">
-    <div><label>Endpoint host</label><input id="wgEndpointHost" type="text" placeholder="vpn.example.com"></div>
-    <div style="flex:0 0 110px"><label>Port</label><input id="wgEndpointPort" type="number" min="1" max="65535"></div>
+    <div><label>Сервер</label><input id="wgEndpointHost" type="text" placeholder="vpn.example.com"></div>
+    <div style="flex:0 0 110px"><label>Порт</label><input id="wgEndpointPort" type="number" min="1" max="65535"></div>
    </div>
-   <label>Tunnel address</label>
+   <label>Адреса тунелю</label>
    <input id="wgAddress" type="text" placeholder="10.6.0.12/32">
-   <label>Allowed IPs</label>
+   <label>Дозволені IP</label>
    <input id="wgAllowedIps" type="text" placeholder="10.6.0.0/24">
-   <label>Keepalive (s, 0 = off)</label>
+   <label>Підтримка з'єднання (с)</label>
    <input id="wgKeepalive" type="number" min="0" max="3600">
-   <small class="hint">Reaches the device from outside your LAN without forwarding port 80 to the internet. Generate the key pair on your computer (<code>wg genkey | tee dev.key | wg pubkey</code>), put the private key here and the public one on the server as this device's peer; most VPN servers and providers hand you both. <b>Allowed IPs</b> decides what the device routes into the tunnel, and it also sets the tunnel netmask, so a lone <code>/32</code> address reaches nothing: list the subnet the peer is on (<code>10.6.0.0/24</code>). <code>0.0.0.0/0</code> sends everything through the VPN. The private key stays on the device and in its settings export; the page never reads it back. The tunnel needs the clock, so NTP starts whenever it is enabled.</small>
+   <small class="hint">Reaches the device from outside your LAN without forwarding port 80 to the internet. Generate the key pair on your computer (<code>wg genkey | tee dev.key | wg pubkey</code>), put the private key here and the public one on the server as this device's peer; most VPN servers and providers hand you both. <b>Дозволені IP</b> decides what the device routes into the tunnel, and it also sets the tunnel netmask, so a lone <code>/32</code> address reaches nothing: list the subnet the peer is on (<code>10.6.0.0/24</code>). <code>0.0.0.0/0</code> sends everything through the VPN. The private key stays on the device and in its settings export; the page never reads it back. The tunnel needs the clock, so NTP starts whenever it is enabled.</small>
   </div>
-  <div class="card"><h2>Setup hotspot (AP)</h2>
-   <label>AP name</label><input id="apSsid" type="text">
-   <label>AP password <span class="muted">(min 8 chars)</span></label>
+  <div class="card"><h2>Точка доступу</h2>
+   <label>Назва точки доступу</label><input id="apSsid" type="text">
+   <label>Пароль точки доступу <span class="muted">(min 8 chars)</span></label>
    <input id="apPass" type="text" placeholder="(unchanged)">
-   <div class="chk"><input id="apOpen" type="checkbox" onchange="apOpenChanged()"><label>No password (open hotspot)</label></div>
+   <div class="chk"><input id="apOpen" type="checkbox" onchange="apOpenChanged()"><label>Без пароля (відкрита мережа)</label></div>
    <small class="hint">The AP appears when no WiFi is configured or the connection fails. Like the WiFi passwords above, leaving the field blank keeps the stored one; tick the box to clear it and leave the hotspot open.</small>
   </div>
  </section>
 
  <!-- DISPLAY (shared) -->
  <section id="display" class="tab">
-  <div class="card"><h2>Mode</h2>
-   <label>What this device shows</label>
+  <div class="card"><h2>Режим</h2>
+   <label>Що показує пристрій</label>
    <select id="mode" onchange="modeChanged()">
+    <option value="clock">Годинник</option>
+    <option value="alerts">Карта тривог</option>
+    <option value="mascot">Авіадруг — анімований помічник</option>
     <option value="stocks">Ticker</option>
     <option value="usage">Clawdmeter</option>
-    <option value="radar">Radar</option>
+    <option value="radar">Радар</option>
     <option value="ha">Home Assistant</option>
-    <option value="theme">Theme clock</option>
-    <option value="carousel">Carousel (rotate modes)</option>
+    <option value="theme">Завантажена тема годинника</option>
+    <option value="carousel">Карусель</option>
    </select>
    <div id="carouselRow">
-    <label>Switch mode every (s)</label><input id="carouselSec" type="number" min="5" max="3600">
+    <label>Змінювати режим кожні (с)</label><input id="carouselSec" type="number" min="5" max="3600">
+    <div class="chk"><input id="carouselClock" type="checkbox"><label>Годинник</label></div>
+    <div class="chk"><input id="carouselAlerts" type="checkbox"><label>Карта тривог</label></div>
+    <div class="chk"><input id="carouselMascot" type="checkbox"><label>Авіадруг</label></div>
     <div class="chk"><input id="carouselTicker" type="checkbox"><label>Ticker</label></div>
     <div class="chk"><input id="carouselUsage" type="checkbox"><label>Clawdmeter</label></div>
-    <div class="chk"><input id="carouselRadar" type="checkbox"><label>Radar</label></div>
+    <div class="chk"><input id="carouselRadar" type="checkbox"><label>Радар</label></div>
     <div class="chk"><input id="carouselHa" type="checkbox"><label>Home Assistant</label></div>
-    <div class="chk"><input id="carouselTheme" type="checkbox"><label>Theme clock</label></div>
+    <div class="chk"><input id="carouselTheme" type="checkbox"><label>Тематичний годинник</label></div>
    </div>
    <small class="hint">Each name here is the tab that configures it. Pick the active feature, then set it up in its own tab. Carousel rotates through the ticked features.</small>
   </div>
-  <div class="card" id="themeCard"><h2>Theme clocks</h2>
-   <label>Installed theme</label><select id="themeSelect" onchange="themeChoiceChanged()"></select>
-   <div style="margin-top:12px"><button class="btn" id="themeUseBtn" onclick="selectTheme()">Use theme</button>
-    <button class="btn" onclick="deleteTheme()">Remove</button></div>
+  <div class="card" id="clockFaceCard"><h2>Вбудовані теми годинника</h2>
+   <label>Виберіть стиль</label><select id="clockFace">
+    <option value="0">Мінімалістичний</option><option value="1">Аналоговий</option>
+    <option value="2">Інформаційний</option><option value="3">Ретро</option>
+    <option value="4">Авіаційний висотомір</option>
+   </select>
+   <small class="hint">Оберіть режим «Годинник». Сповіщення про тривоги з'являються поверх будь-якої теми.</small>
+  </div>
+  <div class="card" id="themeCard"><h2>Додаткові теми .stheme</h2>
+   <label>Встановлена тема</label><select id="themeSelect" onchange="themeChoiceChanged()"></select>
+   <div style="margin-top:12px"><button class="btn" id="themeUseBtn" onclick="selectTheme()">Застосувати тему</button>
+    <button class="btn" onclick="deleteTheme()">Видалити</button></div>
    <small class="hint" id="themeDetails"></small>
-   <label>Install a theme</label><input id="themeFile" type="file" accept=".stheme">
-   <button class="btn" id="themeUploadBtn" onclick="installTheme()">Install .stheme</button>
+   <label>Установити тему</label><input id="themeFile" type="file" accept=".stheme">
+   <button class="btn" id="themeUploadBtn" onclick="installTheme()">Установити .stheme</button>
    <small class="hint" id="themeStatus">Loading themes…</small>
    <small class="hint">Theme clocks use the timezone below. Install a package, then choose Use theme. Notifications continue to appear above it.</small>
   </div>
-  <div class="card"><h2>Screen</h2>
-   <label>Brightness: <span id="brVal"></span>%</label>
+  <div class="card"><h2>Екран</h2>
+   <label>Яскравість: <span id="brVal"></span>%</label>
    <input id="brightness" type="range" min="0" max="100" oninput="brVal.textContent=this.value">
-   <div class="chk"><input id="autoBrightness" type="checkbox" onchange="autoToggled()"><label>Auto-brightness (light sensor on A0)</label></div>
-   <label>Orientation</label>
+   <div class="chk"><input id="autoBrightness" type="checkbox" onchange="autoToggled()"><label>Автоматична яскравість (датчик освітлення)</label></div>
+   <label>Поворот екрана</label>
    <select id="rotation"><option value="0">0&deg;</option><option value="1">90&deg;</option>
     <option value="2">180&deg;</option><option value="3">270&deg;</option></select>
-   <div class="chk"><input id="backlightInverted" type="checkbox"><label>Backlight is active-low (try if screen stays dark)</label></div>
+   <div class="chk"><input id="backlightInverted" type="checkbox"><label>Інвертувати керування підсвічуванням</label></div>
   </div>
-  <div class="card"><h2>Colour</h2>
-   <label>Colour order</label>
+  <div class="card"><h2>Кольори</h2>
+   <label>Порядок кольорів</label>
    <select id="colorOrder">
     <option value="auto">Panel default</option>
     <option value="rgb">RGB</option>
     <option value="bgr">BGR (swap red and blue)</option>
    </select>
-   <div class="chk" style="margin-top:10px"><input id="colorInvert" type="checkbox"><label>Invert the panel</label></div>
-   <label>Red: <span id="rgVal"></span>%</label>
+   <div class="chk" style="margin-top:10px"><input id="colorInvert" type="checkbox"><label>Інверсія кольорів екрана</label></div>
+   <label>Червоний: <span id="rgVal"></span>%</label>
    <input id="rGain" type="range" min="50" max="150" oninput="rgVal.textContent=this.value">
-   <label>Green: <span id="ggVal"></span>%</label>
+   <label>Зелений: <span id="ggVal"></span>%</label>
    <input id="gGain" type="range" min="50" max="150" oninput="ggVal.textContent=this.value">
-   <label>Blue: <span id="bgVal"></span>%</label>
+   <label>Синій: <span id="bgVal"></span>%</label>
    <input id="bGain" type="range" min="50" max="150" oninput="bgVal.textContent=this.value">
    <div style="margin-top:10px"><button class="btn sec" onclick="resetColors()">Reset to 100%</button></div>
    <small class="hint">The panels shipped in these devices are not the same part, so the same firmware can look warm on one unit and green on another. Turn a channel down to pull that cast out. If red and blue come out swapped, switch the colour order; if the whole screen looks like a negative, tick Invert. Saving applies it immediately, so you can watch the screen while you adjust.</small>
   </div>
-  <div class="card" id="buttonCard" style="display:none"><h2>Button</h2>
-   <label>Short press</label>
+  <div class="card" id="buttonCard" style="display:none"><h2>Кнопка</h2>
+   <label>Коротке натискання</label>
    <select id="btnShort">
     <option value="0">Nothing</option>
     <option value="1">Screen off (~1s)</option>
@@ -179,7 +195,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <option value="5">Wake screen</option>
     <option value="6">Acknowledge notification</option>
    </select>
-   <label>Long press</label>
+   <label>Довге натискання</label>
    <select id="btnLong">
     <option value="0">Nothing</option>
     <option value="1">Screen off (~1s)</option>
@@ -189,45 +205,107 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <option value="5">Wake screen</option>
     <option value="6">Acknowledge notification</option>
    </select>
-   <label>Touch sensitivity: <span id="btnSensVal"></span>%</label>
+   <label>Чутливість дотику: <span id="btnSensVal"></span>%</label>
    <input id="btnSens" type="range" min="50" max="99" oninput="btnSensVal.textContent=this.value">
    <small class="hint">The capacitive button reads pressed when its touch value drops below this percent of the idle baseline. Lower = firmer touch needed; higher = more sensitive. Next page freezes the carousel on the current page; Home resumes it.</small>
   </div>
-  <div class="card"><h2>Clock &amp; night mode</h2>
-   <label>Timezone</label>
+  <div class="card"><h2>Годинник і нічний режим</h2>
+   <label>Часовий пояс</label>
    <select id="tz"></select>
-   <label>Language <span class="muted">(month and weekday names on spec 2 themes)</span></label>
-   <select id="lang"><option value="en">English</option><option value="pt">Portugu&ecirc;s</option><option value="es">Espa&ntilde;ol</option><option value="fr">Fran&ccedil;ais</option><option value="de">Deutsch</option><option value="it">Italiano</option></select>
+   <label>Мова <span class="muted">(інтерфейс, вбудований годинник, повідомлення)</span></label>
+   <select id="lang"><option value="uk">Українська</option><option value="en">English</option><option value="pt">Portugu&ecirc;s</option><option value="es">Espa&ntilde;ol</option><option value="fr">Fran&ccedil;ais</option><option value="de">Deutsch</option><option value="it">Italiano</option></select>
    <div class="muted" id="clockNow" style="margin:8px 0">Clock: -</div>
-   <label>Device location</label>
+   <label>Розташування пристрою</label>
    <div class="row">
     <div><input id="locLat" type="number" step="0.0001" placeholder="latitude, e.g. 52.3676"></div>
     <div><input id="locLon" type="number" step="0.0001" placeholder="longitude, e.g. 4.9041"></div>
    </div>
    <div class="row">
     <div><input id="locQ" type="text" placeholder="Search a place" onkeydown="if(event.key==='Enter')placeSearch()"></div>
-    <div><button class="btn sec" onclick="placeSearch()">Search</button></div>
+    <div><button class="btn sec" onclick="placeSearch()">Знайти</button></div>
    </div>
    <select id="locRes" style="display:none" onchange="placePick()"></select>
    <small class="hint" id="locMsg">Used by the sunrise and sunset schedule below, and by the radar unless it has its own. The search runs in your browser (open-meteo.com); the device never sends the name anywhere. Leave 0/0 for none.</small>
-   <div class="chk"><input id="nightEnabled" type="checkbox"><label>Dim or blank the screen on a nightly schedule</label></div>
+   <div class="chk"><input id="nightEnabled" type="checkbox"><label>Зменшувати яскравість уночі за розкладом</label></div>
    <div class="row">
-    <div><label>From</label><input id="nightStart" type="time"></div>
-    <div><label>To</label><input id="nightEnd" type="time"></div>
+    <div><label>Від</label><input id="nightStart" type="time"></div>
+    <div><label>До</label><input id="nightEnd" type="time"></div>
    </div>
-   <label>Night brightness: <span id="nlVal"></span>% <span class="muted">(0 = screen off)</span></label>
+   <label>Нічна яскравість: <span id="nlVal"></span>% <span class="muted">(0 = screen off)</span></label>
    <input id="nightLevel" type="range" min="0" max="100" oninput="nlVal.textContent=this.value">
    <small class="hint">Needs internet once to set the clock over NTP. The timezone also applies to theme clocks. While the window is active it overrides the brightness and auto-brightness above, except when the sun schedule below is on: then its "When night mode is also on" choice decides. Times are local to the selected timezone; DST is handled automatically. After a reboot the schedule resumes once the clock re-syncs, so the screen may show normal brightness for a few seconds.</small>
-   <div class="chk"><input id="sunEnabled" type="checkbox" onchange="sunToggled()"><label>Follow sunrise and sunset (needs the device location)</label></div>
-   <label>Lowest brightness: <span id="slVal"></span>% <span class="muted">(0 = screen off)</span></label>
+   <div class="chk"><input id="sunEnabled" type="checkbox" onchange="sunToggled()"><label>За сходом і заходом сонця</label></div>
+   <label>Мінімальна яскравість: <span id="slVal"></span>% <span class="muted">(0 = screen off)</span></label>
    <input id="sunLow" type="range" min="0" max="100" oninput="slVal.textContent=this.value">
    <div class="row">
-    <div><label>Sunrise fade (minutes)</label><input id="sunRise" type="number" min="0" max="120"></div>
-    <div><label>Sunset fade (minutes)</label><input id="sunSet" type="number" min="0" max="120"></div>
+    <div><label>Плавне ввімкнення на світанку (хв)</label><input id="sunRise" type="number" min="0" max="120"></div>
+    <div><label>Плавне затемнення на заході (хв)</label><input id="sunSet" type="number" min="0" max="120"></div>
    </div>
-   <label>When night mode is also on</label>
+   <label>Якщо нічний режим теж увімкнено</label>
    <select id="sunOverlap"><option value="0">Night mode first</option><option value="1">Sun schedule first</option><option value="2">The darker of the two</option></select>
    <small class="hint" id="sunNow">The screen rises from the lowest to the normal brightness (the slider above) over the sunrise fade, and falls back over the sunset fade. Sunrise and sunset are worked out on the device. Replaces auto-brightness.</small>
+  </div>
+ </section>
+
+ <!-- ANIMATED AVIATION FRIEND (feature) -->
+ <section id="mascot" class="tab">
+  <div class="card"><h2>Авіадруг — мікро-ШІ</h2>
+   <p class="hint">Анімований маленький дрон: моргає, ворушить крильцями, рухає ротом, міняє настрій. Комікс-булька містить фразу, а під нею — автора.</p>
+   <div class="chk"><input type="checkbox" id="mascotEnabled"><label>Увімкнути авіадруга та фрази поверх годинника</label></div>
+   <div class="row">
+    <div><label>Показ фрази (сек)</label>
+     <input type="number" id="mascotSpeechSec" min="10" max="300" step="5" value="60"></div>
+    <div><label>Рухи героя (сек)</label>
+     <input type="number" id="mascotRoamSec" min="5" max="180" step="5" value="30"></div>
+   </div>
+   <div class="row"><div><label>Фрази поверх годинника кожні (хв)</label>
+    <input type="number" id="mascotIntervalMin" min="5" max="240"></div>
+    <div><label>Тематика</label>
+     <select id="mascotFocus">
+      <option value="0">Змішана: мотивація та бізнес</option>
+      <option value="1">Бізнес і робота</option>
+      <option value="2">Загальна мотивація</option>
+     </select></div></div>
+   <p class="hint">140 українських фраз: 5 класичних літературних уривків, 65 адаптованих думок із зазначенням автора та 70 фраз Авіадруга. Різні жести й настрій навіть для повторів. Добірка локально змінюється щомісяця; нові тексти надходитимуть із наступними оновленнями прошивки.</p>
+   <p class="hint">У режимі «Авіадруг»: фраза → прогулянка героя → наступна фраза, за вибраними інтервалами. У каруселі показуються тільки фрази без прогулянок; кожна нова поява сторінки приносить нову фразу. Повітряна тривога завжди має пріоритет.</p>
+  </div>
+ </section>
+
+ <!-- AIR ALERTS UA (feature) -->
+ <section id="alerts" class="tab">
+  <div class="card"><h2>Повітряні тривоги України</h2>
+   <p class="req"><b>Додатковий індикатор, не заміна офіційним сповіщенням.</b> Не вимикайте основний застосунок тривог. Дані сервісу <a href="https://devs.alerts.in.ua/" target="_blank" rel="noopener">alerts.in.ua</a>. Якщо дані недоступні або застарілі, пристрій показує «НЕМАЄ ДАНИХ».</p>
+   <div class="chk"><input id="alertsEnabled" type="checkbox"><label>Онлайн-моніторинг тривог</label></div>
+   <div class="chk"><input id="alertsNotify" type="checkbox"><label>Повідомляти про початок і відбій тривоги поверх годинника</label></div>
+   <div class="row">
+    <div><label>Область</label><select id="alertsUid" onchange="alertsRegionChanged()">
+     <option value="14">Київська область</option><option value="31">м. Київ</option>
+     <option value="29">АР Крим</option><option value="8">Волинська область</option>
+     <option value="4">Вінницька область</option><option value="9">Дніпропетровська область</option>
+     <option value="28">Донецька область</option><option value="10">Житомирська область</option>
+     <option value="11">Закарпатська область</option><option value="12">Запорізька область</option>
+     <option value="13">Івано-Франківська область</option><option value="15">Кіровоградська область</option>
+     <option value="16">Луганська область</option><option value="27">Львівська область</option>
+     <option value="17">Миколаївська область</option><option value="18">Одеська область</option>
+     <option value="19">Полтавська область</option><option value="5">Рівненська область</option>
+     <option value="30">м. Севастополь</option><option value="20">Сумська область</option>
+     <option value="21">Тернопільська область</option><option value="22">Харківська область</option>
+     <option value="23">Херсонська область</option><option value="3">Хмельницька область</option>
+     <option value="24">Черкаська область</option><option value="26">Чернівецька область</option>
+     <option value="25">Чернігівська область</option>
+    </select></div>
+    <div><label>Інтервал оновлення (секунд)</label><input id="alertsPollSec" type="number" min="30" max="600"></div>
+   </div>
+   <small class="hint">Схематична карта відображає статуси всіх областей одним запитом. Повідомлення стосуються вибраного регіону.</small>
+   <label>Назва області на екрані</label>
+   <input id="alertsLabel" type="text" maxlength="30" placeholder="КИЇВСЬКА ОБЛАСТЬ">
+   <small class="hint">Повідомлення підтримують український шрифт. Використовуйте коротку назву області.</small>
+   <label>Персональний API-токен alerts.in.ua</label>
+   <input id="alertsToken" type="password" autocomplete="new-password" placeholder="(залиште порожнім, щоб не змінювати)">
+   <div class="chk"><input id="alertsClearToken" type="checkbox"><label>Видалити збережений токен</label></div>
+   <small class="hint">Токен можна додати пізніше. Поки його немає, на екрані буде «НЕМАЄ ДАНИХ». Токен зберігається лише в пристрої, а не в GitHub.</small>
+   <div style="margin-top:12px"><button class="btn sec" onclick="loadAlertsStatus()">Перевірити стан API</button></div>
+   <div id="alertsLive" class="req" style="margin-top:12px">Стан ще не перевірено</div>
   </div>
  </section>
 
@@ -267,7 +345,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <select id="colorInverted"><option value="false">Green up / Red down</option>
     <option value="true">Red up / Green down</option></select>
   </div>
-  <div class="card"><h2>What to show</h2>
+  <div class="card"><h2>Відображати</h2>
    <div class="chk"><input id="showName" type="checkbox"><label>Name / symbol</label></div>
    <div class="chk"><input id="showPrice" type="checkbox"><label>Price</label></div>
    <div class="chk"><input id="showChange" type="checkbox"><label>Change &amp; % change</label></div>
@@ -308,25 +386,25 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 
  <!-- RADAR (feature) -->
  <section id="radar" class="tab">
-  <div class="card"><h2>Home location</h2>
-   <div class="chk"><input id="radarUseDevice" type="checkbox" onchange="radarLocChanged()"><label>Use the device location (Display tab, Clock &amp; night mode card)</label></div>
+  <div class="card"><h2>Місце розташування</h2>
+   <div class="chk"><input id="radarUseDevice" type="checkbox" onchange="radarLocChanged()"><label>Використовувати координати пристрою (вкладка Екран)</label></div>
    <div class="row">
-    <div><label>Latitude</label><input id="radarLat" type="number" step="0.0001" placeholder="52.3676"></div>
-    <div><label>Longitude</label><input id="radarLon" type="number" step="0.0001" placeholder="4.9041"></div>
+    <div><label>Широта</label><input id="radarLat" type="number" step="0.0001" placeholder="52.3676"></div>
+    <div><label>Довгота</label><input id="radarLon" type="number" step="0.0001" placeholder="4.9041"></div>
    </div>
    <small class="hint">The radar centres on this point. Decimal degrees, e.g. <code>52.3676</code>, <code>4.9041</code>. Leave at 0/0 and the screen prompts you to set it.</small>
   </div>
-  <div class="card"><h2>Range &amp; data</h2>
+  <div class="card"><h2>Радіус і дані</h2>
    <div class="row">
-    <div><label>Range</label>
+    <div><label>Радіус</label>
      <select id="rangeKm"><option value="5">5</option><option value="10">10</option>
       <option value="15">15</option><option value="20">20</option><option value="25">25</option>
       <option value="50">50</option></select></div>
-    <div><label>Units</label>
+    <div><label>Одиниці</label>
      <select id="unitsMi"><option value="false">km</option><option value="true">mi</option></select></div>
-    <div><label>Refresh (s)</label><input id="radarPollSec" type="number" min="3" max="3600"></div>
+    <div><label>Оновлення (с)</label><input id="radarPollSec" type="number" min="3" max="3600"></div>
    </div>
-   <label>Data source</label>
+   <label>Джерело даних</label>
    <select id="radarSource" onchange="radarSrcChanged()">
     <option value="adsblol">adsb.lol (direct, no server)</option>
     <option value="adsbfi">adsb.fi (direct, no server)</option>
@@ -336,17 +414,17 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <input id="radarWebhookUrl" type="url" placeholder="http://n8n.local:5678/webhook/radar"></div>
    <small class="hint" id="radarSrcHint"></small>
   </div>
-  <div class="card"><h2>What to show</h2>
-   <label>Marker &amp; label size</label>
+  <div class="card"><h2>Відображати</h2>
+   <label>Розмір позначок і підписів</label>
    <select id="radarUiScale"><option value="0">Small</option><option value="1">Medium</option><option value="2">Large</option></select>
    <label style="margin-top:12px">Hide aircraft below (ft, 0 = show all)</label>
    <input id="radarMinAlt" type="number" min="0" max="60000" step="100">
    <small class="hint">Drops ground traffic (parked/taxiing) and low flights. Try <code>500</code> to hide anything on or near the ground.</small>
-   <div class="chk" style="margin-top:12px"><input id="showLabels" type="checkbox"><label>Callsign &amp; altitude labels</label></div>
-   <div class="chk"><input id="showVectors" type="checkbox"><label>Speed / heading vectors</label></div>
-   <div class="chk"><input id="showRimDots" type="checkbox"><label>Off-screen traffic dots on the rim</label></div>
+   <div class="chk" style="margin-top:12px"><input id="showLabels" type="checkbox"><label>Позивні й висота</label></div>
+   <div class="chk"><input id="showVectors" type="checkbox"><label>Вектори швидкості й курсу</label></div>
+   <div class="chk"><input id="showRimDots" type="checkbox"><label>Позначки літаків за межами екрана</label></div>
   </div>
-  <div class="card"><h2>Airports</h2>
+  <div class="card"><h2>Аеропорти</h2>
    <table id="apTable"></table>
    <button class="btn sec" style="margin-top:10px" onclick="addAp()">+ Add airport</button>
    <small class="hint">A few home-area airports drawn as markers. ICAO code (e.g. <code>LSZH</code>) and its lat/lon. Up to 6.</small>
@@ -356,14 +434,14 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
  <!-- HOME ASSISTANT (feature) -->
  <section id="ha" class="tab">
   <div class="card"><h2>MQTT</h2>
-   <label>Broker host</label><input id="haBrokerHost" type="text" placeholder="broker.local or 192.168.1.10">
+   <label>MQTT-сервер</label><input id="haBrokerHost" type="text" placeholder="broker.local or 192.168.1.10">
    <div class="row">
-    <div><label>Port</label><input id="haBrokerPort" type="number" min="1" max="65535"></div>
-    <div><label>Show each screen (s)</label><input id="haDwellSec" type="number" min="3" max="300"></div>
+    <div><label>Порт</label><input id="haBrokerPort" type="number" min="1" max="65535"></div>
+    <div><label>Показ екрана (с)</label><input id="haDwellSec" type="number" min="3" max="300"></div>
    </div>
    <div class="row">
-    <div><label>Username <span class="muted">(optional)</span></label><input id="haBrokerUser" type="text" autocomplete="off"></div>
-    <div><label>Password <span class="muted">(optional)</span></label><input id="haBrokerPass" type="password" autocomplete="new-password" placeholder="(unchanged)"></div>
+    <div><label>Ім'я користувача <span class="muted">(optional)</span></label><input id="haBrokerUser" type="text" autocomplete="off"></div>
+    <div><label>Пароль <span class="muted">(optional)</span></label><input id="haBrokerPass" type="password" autocomplete="new-password" placeholder="(unchanged)"></div>
    </div>
    <div style="margin-top:10px"><button class="btn sec" onclick="haClearScreens()">Clear screens</button></div>
    <small class="hint">Plain TCP, not TLS — keep the broker on your LAN. Leave the host blank to switch the feature off. <b>Switching it on or off needs a restart</b> (System tab): the device takes the memory for it at boot, and only when a host is set. Changing from one host to another takes effect at once. The device subscribes to <code>smalltv/&lt;hostname&gt;/screen/&lt;slot&gt;</code>: publish a screen there as <b>retained</b> JSON and it joins the on-screen rotation; an empty retained payload deletes it. Screens survive a reboot, and the broker's retained copies repopulate them on reconnect. Like the other passwords here, a blank password field keeps the stored one.</small>
@@ -373,46 +451,46 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 
  <!-- UPDATE -->
  <section id="update" class="tab">
-  <div class="card"><h2>Update from GitHub</h2>
+  <div class="card"><h2>Оновлення по Wi-Fi (GitHub)</h2>
    <div class="muted">Installed: <b id="fwVer">-</b></div>
    <div style="margin-top:10px">
-    <button class="btn sec" onclick="checkUpdate()" id="chkBtn">Check for latest</button>
-    <button class="btn" style="margin-left:8px" onclick="selfUpdate()" id="ghUpBtn" disabled>Update now</button>
+    <button class="btn sec" onclick="checkUpdate()" id="chkBtn">Перевірити оновлення</button>
+    <button class="btn" style="margin-left:8px" onclick="selfUpdate()" id="ghUpBtn" disabled>Оновити зараз</button>
    </div>
    <div id="ghMsg" class="muted" style="margin-top:8px"></div>
-   <small class="hint">Pulls the newest release straight from <a id="repoLink" href="https://github.com/giovi321/smalltv-mod/releases" target="_blank">the GitHub repo</a>. HTTPS OTA is tight on the ESP8266; if it fails, use the manual upload below.</small>
+   <small class="hint">Оновлення по Wi-Fi без завантаження .bin вручну. Браузер перевіряє <a id="repoLink" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua/tree/ota" target="_blank" rel="noopener">GitHub OTA</a>, завантажує образ і передає його в GeekMagic. На комп’ютері або телефоні потрібен інтернет і доступ до локальної мережі пристрою. Якщо CDN тимчасово недоступний, скористайся ручним оновленням нижче.</small>
   </div>
-  <div class="card"><h2>Manual update (OTA)</h2>
+  <div class="card"><h2>Ручне оновлення (OTA)</h2>
    <input id="fw" type="file" accept=".bin">
-   <div style="margin-top:12px"><button class="btn" onclick="upload()" id="upBtn">Upload &amp; flash</button></div>
+   <div style="margin-top:12px"><button class="btn" onclick="upload()" id="upBtn">Завантажити й прошити</button></div>
    <div class="bar"><div id="upBar"></div></div>
    <div id="upMsg" class="muted" style="margin-top:8px"></div>
    <small class="hint">Upload a firmware.bin from the <a href="https://github.com/giovi321/smalltv-mod/releases" target="_blank">releases page</a> or a local build. The device reboots when done.</small>
   </div>
-  <div class="card"><h2>Settings backup</h2>
+  <div class="card"><h2>Резервна копія налаштувань</h2>
    <button class="btn sec" onclick="location.href='/api/export'">Export settings</button>
    <input id="cfgFile" type="file" accept=".json,application/json" style="margin-top:10px">
-   <div style="margin-top:10px"><button class="btn" onclick="importCfg()">Import &amp; reboot</button></div>
+   <div style="margin-top:10px"><button class="btn" onclick="importCfg()">Імпортувати й перезавантажити</button></div>
    <small class="hint">The export is the device's <code>config.json</code>, including WiFi passwords and the WireGuard private key in clear text; treat the file accordingly. Import applies everything and reboots.</small>
   </div>
-  <div class="card"><h2>Password</h2>
+  <div class="card"><h2>Пароль</h2>
    <div id="authState" class="muted"></div>
-   <label>Username</label><input id="authUser" type="text" autocomplete="off" placeholder="admin">
-   <label>Password</label><input id="authPass" type="password" autocomplete="new-password" placeholder="(unchanged)">
-   <label>Password again</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="(unchanged)">
+   <label>Ім'я користувача</label><input id="authUser" type="text" autocomplete="off" placeholder="admin">
+   <label>Пароль</label><input id="authPass" type="password" autocomplete="new-password" placeholder="(unchanged)">
+   <label>Повторіть пароль</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="(unchanged)">
    <button id="authRemoveBtn" class="btn danger" style="display:none;margin-top:8px" onclick="authRemove()">Remove password</button>
    <small class="hint">Off by default, which leaves the page open to anyone on your network. A saved password locks it: the settings page, the API, and the firmware upload then sit behind HTTP digest auth, so the password itself is never sent over the wire. Type the new password twice; if the two fields differ, nothing is saved. Leave both blank to keep the stored password. "Remove password" opens the page again. The clawdmeter daemon's push endpoint stays open, because it has no way to send a password and it only writes the numbers on the screen. <b>There is no password recovery.</b> Forget it and the only way back in is to reflash the device over USB or the UART header, so write it down before you save.</small>
   </div>
-  <div class="card"><h2>Maintenance</h2>
+  <div class="card"><h2>Обслуговування</h2>
    <button class="btn sec" onclick="reboot()">Reboot</button>
    <button class="btn danger" style="margin-left:8px" onclick="factory()">Factory reset</button>
   </div>
  </section>
 </main>
 
-<div style="text-align:center;padding:0 0 16px"><button class="btn" onclick="saveAll()">Save settings</button></div>
+<div style="text-align:center;padding:0 0 16px"><button class="btn" onclick="saveAll()">Зберегти налаштування</button></div>
 <div style="text-align:center;padding:0 0 24px;font-size:12px">
- <a id="footRepo" href="https://github.com/giovi321/smalltv-mod" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: giovi321/smalltv-mod</a>
+ <a id="footRepo" href="https://github.com/Oleksandr08041991/smalltv-alerts-ua" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: SmallTV Air Alerts UA</a>
  <span id="footVer" class="muted"></span>
 </div>
 <div id="toast" class="toast"></div>
@@ -474,6 +552,7 @@ var T_BOOL=['showName','showPrice','showChange','showChart','showRangeLabel','sh
 // browser so the firmware carries no tz database (same idea as the cash finder).
 var TZMAP={
  '':'UTC0','UTC':'UTC0',
+ 'Europe/Kyiv':'EET-2EEST,M3.5.0/3,M10.5.0/4',
  'Europe/London':'GMT0BST,M3.5.0/1,M10.5.0','Europe/Dublin':'GMT0IST,M3.5.0/1,M10.5.0',
  'Europe/Lisbon':'WET0WEST,M3.5.0/1,M10.5.0',
  'Europe/Rome':'CET-1CEST,M3.5.0,M10.5.0/3','Europe/Paris':'CET-1CEST,M3.5.0,M10.5.0/3',
@@ -501,8 +580,8 @@ var TZMAP={
 function fillTz(){var s=$('tz');if(!s)return;var keys=Object.keys(TZMAP).filter(function(k){return k!==''});
  keys.sort();s.innerHTML='<option value="">UTC</option>'+keys.map(function(k){return '<option value="'+k+'">'+k+'</option>'}).join('');}
 
-var MODEOPT={ticker:'stocks',usage:'usage',radar:'radar',ha:'ha',theme:'theme'};
-var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme'};
+var MODEOPT={ticker:'stocks',usage:'usage',radar:'radar',ha:'ha',theme:'theme',alerts:'alerts',mascot:'mascot'};
+var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',radar:'carouselRadar',ha:'carouselHa',theme:'carouselTheme',alerts:'carouselAlerts',clock:'carouselClock',mascot:'carouselMascot'};
 function hideFeat(name){
  var b=document.querySelector('nav button[data-t="'+name+'"]'); if(b)b.remove();
  var sec=$(name); if(sec)sec.remove();
@@ -525,7 +604,7 @@ function setGain(id,lab,v){var n=(v!=null?v:100);sv(id,n);var e=$(lab);if(e)e.te
 function resetColors(){setGain('rGain','rgVal',100);setGain('gGain','ggVal',100);setGain('bGain','bgVal',100);
  toast('Gains reset — press Save settings to apply')}
 function loadConfig(){return j('/api/config').then(function(c){C=c;
- var f=c.features||{}; ['ticker','usage','radar','ha'].forEach(function(k){if(f[k]===false)hideFeat(k)});
+ var f=c.features||{}; ['ticker','usage','radar','ha','alerts','mascot'].forEach(function(k){if(f[k]===false)hideFeat(k)});
  // WireGuard is only built for the chips with room for it; drop the card otherwise
  if(f.theme!==true){hideFeat('theme');var tc=$('themeCard');if(tc)tc.remove()}else{loadThemes()}
  if(f.wireguard===false){var wc=$('wgCard'); if(wc)wc.remove()}
@@ -543,7 +622,7 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  sv('wgAddress',w.address); sv('wgAllowedIps',w.allowedIps);
  sv('wgKeepalive',w.keepalive!=null?w.keepalive:25);
  var pk=$('wgPrivateKey'); if(pk)pk.placeholder=w.privateKeySet?'(unchanged)':'paste the private key';
- var t=c.ticker||{}, u=c.usage||{};
+ var t=c.ticker||{}, u=c.usage||{}, al=c.alerts||{}, mc=c.mascot||{};
  // shared
  ['apSsid','hostname'].forEach(function(k){$(k).value=c[k]!=null?c[k]:''});
  renderWifi(c.wifi||(c.staSsid?[{ssid:c.staSsid,passSet:c.staPassSet}]:[]));
@@ -561,16 +640,29 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  // clock slice
  fillTz(); var ck=c.clock||{};
  if(ck.tz && !(ck.tz in TZMAP)){var _ts=$('tz'); if(_ts){var _o=document.createElement('option');_o.value=ck.tz;_o.textContent=ck.tz;_ts.appendChild(_o);}}
- sv('tz',ck.tz||''); sv('lang',ck.lang||'en'); sc('nightEnabled',!!ck.nightEnabled);
+ sv('tz',ck.tz||'Europe/Kyiv'); sv('lang',ck.lang||'uk'); sv('clockFace',ck.face||0); sc('nightEnabled',!!ck.nightEnabled);
  sv('nightStart',ck.nightStart||'22:00'); sv('nightEnd',ck.nightEnd||'07:00');
  sv('nightLevel',ck.nightLevel!=null?ck.nightLevel:0); $('nlVal')&&($('nlVal').textContent=(ck.nightLevel!=null?ck.nightLevel:0));
  sv('locLat',ck.lat||''); sv('locLon',ck.lon||'');
  sc('sunEnabled',!!ck.sunEnabled); sv('sunLow',ck.sunLow!=null?ck.sunLow:5); $('slVal')&&($('slVal').textContent=(ck.sunLow!=null?ck.sunLow:5));
  sv('sunRise',ck.sunRise!=null?ck.sunRise:60); sv('sunSet',ck.sunSet!=null?ck.sunSet:60); sv('sunOverlap',ck.sunOverlap||0);
- $('mode').value=c.mode||'stocks'; modeChanged();
+ $('mode').value=c.mode||'clock'; if(!$('mode').value)$('mode').value='clock'; modeChanged();
  sv('carouselSec',c.carouselSec||30);
  sc('carouselTicker',c.carouselTicker!==false); sc('carouselUsage',c.carouselUsage!==false); sc('carouselRadar',c.carouselRadar!==false);
- sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true);
+ sc('carouselHa',c.carouselHa!==false); sc('carouselTheme',c.carouselTheme===true); sc('carouselAlerts',c.carouselAlerts!==false); sc('carouselClock',c.carouselClock===true); sc('carouselMascot',c.carouselMascot===true);
+ // Aviation mascot preferences.
+ sc('mascotEnabled',mc.enabled!==false);sv('mascotIntervalMin',mc.intervalMin||30);sv('mascotFocus',mc.focus||0);
+ sv('mascotSpeechSec',mc.speechSec!=null?mc.speechSec:60);
+ sv('mascotRoamSec',mc.roamSec!=null?mc.roamSec:30);
+ // Air Alerts settings. The token itself is intentionally never received.
+ sc('alertsEnabled',al.enabled!==false);sc('alertsNotify',al.notify!==false);
+ var uids=$('alertsUid');
+ if(uids){var au=String(al.uid||14); if(!uids.querySelector('option[value="'+au+'"]')){
+   var aop=document.createElement('option'); aop.value=au; aop.textContent='Custom UID '+au;uids.appendChild(aop)}
+  sv('alertsUid',au)}
+ sv('alertsPollSec',al.pollSec||60);sv('alertsLabel',al.label||'КИЇВСЬКА ОБЛАСТЬ');
+ var at=$('alertsToken');if(at)at.placeholder=al.tokenSet?'(saved, leave blank to keep)':'(enter once received)';
+ sc('alertsClearToken',false);
  // HA / MQTT slice
  var h=c.ha||{};
  sv('haBrokerHost',h.brokerHost); sv('haBrokerPort',h.brokerPort||1883);
@@ -732,6 +824,21 @@ function collect(){
   });
   o.ticker=t;
  }
+ // Aviation mascot slice
+ if($('mascot'))o.mascot={enabled:gc('mascotEnabled'),
+   intervalMin:parseInt(gv('mascotIntervalMin'))||30,
+   speechSec:numIn(gv('mascotSpeechSec'),60,10,300),
+   roamSec:numIn(gv('mascotRoamSec'),30,5,180),
+   focus:parseInt(gv('mascotFocus'))||0};
+ // Air Alerts slice: an empty token field keeps the saved secret.
+ if($('alerts')){
+  var aa={enabled:gc('alertsEnabled'),notify:gc('alertsNotify'),uid:parseInt(gv('alertsUid'))||14,
+    label:gv('alertsLabel').trim(),pollSec:parseInt(gv('alertsPollSec'))||60};
+  var tk=gv('alertsToken').trim();
+  if(tk) aa.token=tk;
+  if(gc('alertsClearToken')) aa.clearToken=true;
+  o.alerts=aa;
+ }
  // usage slice
  if($('usage')) o.usage={usageUrl:gv('usageUrl'), pollSec:parseInt(gv('usagePollSec'))||0, hide5h:gc('usageHide5h')};
  // HA / MQTT slice (blank password keeps the stored one, so only send what was typed)
@@ -740,7 +847,7 @@ function collect(){
   var _hp=gv('haBrokerPass'); if(_hp)_h.brokerPass=_hp; o.ha=_h;}
  // clock slice
  if($('tz')){var _tzn=gv('tz'); var _tzp=(_tzn in TZMAP)?TZMAP[_tzn]:((C.clock&&C.clock.tz===_tzn&&C.clock.tzPosix)?C.clock.tzPosix:'UTC0');
-  o.clock={tz:_tzn,tzPosix:_tzp,lang:gv('lang')||'en',
+  o.clock={tz:_tzn,tzPosix:_tzp,lang:gv('lang')||'uk',face:parseInt(gv('clockFace'))||0,
   nightEnabled:gc('nightEnabled'),nightStart:gv('nightStart')||'22:00',
   nightEnd:gv('nightEnd')||'07:00',nightLevel:parseInt(gv('nightLevel'))||0,
   lat:parseFloat(gv('locLat'))||0,lon:parseFloat(gv('locLon'))||0,
@@ -908,6 +1015,21 @@ function radarLine(r){
  return t;
 }
 
+function alertsRegionChanged(){
+ var sel=$('alertsUid');if(!sel)return;
+ var opt=sel.options[sel.selectedIndex];
+ if(opt)sv('alertsLabel',opt.textContent.toLocaleUpperCase('uk-UA'));
+}
+function loadAlertsStatus(){
+ var e=$('alertsLive');if(!e)return;
+ e.textContent='Checking...';
+ j('/api/alerts/status').then(function(a){
+  var state=a.fresh ? ({R:'AIR ALERT',Y:'WARNING',P:'PARTIAL ALERT',N:'NO ALERT'}[a.status]||'NO DATA') : 'NO DATA';
+  e.textContent=state+' · '+(a.message||'online')+
+   (a.lastOkAgeSec!=null?', last successful update '+a.lastOkAgeSec+'s ago':'')+
+   (a.http?', HTTP '+a.http:'');
+ }).catch(function(err){e.textContent='Cannot check status: '+err.message});
+}
 function wgLine(w){
  if(!w)return '';
  if(!w.compiledIn)return 'WireGuard is not part of this build.';
@@ -928,30 +1050,125 @@ function haClearScreens(){if(!confirm('Clear all HA screens on the device and on
  j('/api/ha/clear',{method:'POST'}).then(function(r){
   toast('Cleared '+r.cleared+' screen(s)'+(r.broker?'':' — device only, broker not connected'));})}
 
-// GitHub self-update
-function checkUpdate(){$('ghMsg').textContent='Checking GitHub...';$('chkBtn').disabled=true;
- j('/api/checkupdate').then(function(u){$('chkBtn').disabled=false;
-  if(!u.ok){$('ghMsg').textContent='Check failed: '+(u.error||'unknown');return}
-  if(u.newer){$('ghMsg').innerHTML='Version <b>'+u.latest+'</b> is available (installed '+u.current+').';$('ghUpBtn').disabled=false}
-  else{$('ghMsg').textContent='Up to date ('+u.current+').';$('ghUpBtn').disabled=true}
- }).catch(function(){$('chkBtn').disabled=false;$('ghMsg').textContent='Check failed'})}
-function selfUpdate(){if(!confirm('Download and flash the latest release from GitHub? The device reboots if it succeeds.'))return;
+// Browser-assisted GitHub OTA for the ESP8266 (SmallTV Ultra).
+// The ESP8266 cannot reliably fit GitHub HTTPS TLS buffers into 80KB of RAM.
+// Instead the user's browser fetches verified public release metadata + the
+// exact release's firmware from our own CORS-enabled GitHub CDN branch, then
+// POSTs it over the LAN to the existing secure same-origin /update handler.
+// This is a *real* firmware update over Wi-Fi, not a .bin file chooser.
+// The browser and device must have LAN access and browser internet access.
+var otaRelease=null;
+var otaApi='https://api.github.com/repos/Oleksandr08041991/smalltv-alerts-ua/contents/latest.json?ref=ota';
+function otaVersion(v){
+ var m=String(v||'').match(/(\d+)\.(\d+)\.(\d+)/);
+ return m?([+m[1],+m[2],+m[3]]):[0,0,0];
+}
+function otaNewer(a,b){
+ var x=otaVersion(a),y=otaVersion(b);
+ for(var i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i]}
+ return false;
+}
+function otaInstalled(){
+ var t=(($('fwVer')&&$('fwVer').textContent)||'').trim();
+ return (t.match(/\d+\.\d+\.\d+/)||[])[0] || (C&&C.version)||'';
+}
+function otaError(message){
+ $('ghMsg').textContent='Помилка OTA: '+message;
+ $('chkBtn').disabled=false;
+ $('ghUpBtn').disabled=true;
+}
+function checkUpdate(){
+ otaRelease=null;
+ $('ghUpBtn').disabled=true;
+ $('chkBtn').disabled=true;
+ $('ghMsg').textContent='Перевіряю останню OTA-версію через GitHub...';
+ return fetch(otaApi,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'})
+ .then(function(r){if(!r.ok)throw Error('GitHub API HTTP '+r.status);return r.json()})
+ .then(function(meta){
+  // GitHub's Contents API normally returns the file base64 encoded.
+  // A proxy with a raw media-type may instead return JSON directly.
+  var manifest=meta;
+  if(meta && meta.encoding==='base64' && meta.content){
+   manifest=JSON.parse(atob(meta.content.replace(/\s/g,'')));
+  }
+  if(!manifest || !/^v\d+\.\d+\.\d+$/.test(manifest.version||''))
+    throw Error('Некоректний OTA-маніфест');
+  if(manifest.file !== 'firmware/'+manifest.version+'.bin')
+    throw Error('OTA-файл не відповідає версії');
+  if(!(manifest.size>300000) || !/^[a-f0-9]{64}$/.test(manifest.sha256||''))
+    throw Error('Відсутній розмір або контрольна сума прошивки');
+  var current=otaInstalled(),tag=manifest.version;
+  if(!otaNewer(tag,current)){
+   $('ghMsg').textContent='Установлена актуальна версія '+(current||tag)+'.';
+   return;
+  }
+  otaRelease={tag:tag,size:manifest.size,digest:'sha256:'+manifest.sha256};
+  $('ghMsg').textContent='Доступна '+tag+' (встановлено '+(current||'невідомо')+'). Оновлення завантажує браузер через Wi-Fi без TLS на ESP8266.';
+  $('ghUpBtn').disabled=false;
+ }).catch(function(e){otaError(e.message+'. Перевір інтернет на телефоні або комп\'ютері.')})
+ .then(function(){$('chkBtn').disabled=false});
+}
+async function otaDownloadFirmware(release){
+ var repo='Oleksandr08041991/smalltv-alerts-ua';
+ var suffix='/firmware/'+encodeURIComponent(release.tag)+'.bin';
+ var urls=[
+  'https://cdn.jsdelivr.net/gh/'+repo+'@ota'+suffix,
+  'https://raw.githubusercontent.com/'+repo+'/ota'+suffix
+ ];
+ var last='';
+ for(var i=0;i<urls.length;i++){
+  try{
+   var r=await fetch(urls[i],{cache:'no-store'});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   var buffer=await r.arrayBuffer();
+   if(buffer.byteLength!==release.size)throw Error('Розмір образу не збігається з GitHub Release');
+   var bytes=new Uint8Array(buffer);
+   if(bytes[0]!==0xE9)throw Error('Некоректний ESP8266 firmware.bin');
+   // SHA256 is available only on HTTPS/secure browser origins. On http://
+   // device IP it may be unavailable; TLS download, asset size and image
+   // header are verified, and Update.end(true) validates flashed image.
+   if(window.crypto && window.crypto.subtle && release.digest &&
+      release.digest.indexOf('sha256:')===0){
+    var raw=await crypto.subtle.digest('SHA-256',buffer);
+    var hash=Array.from(new Uint8Array(raw)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+    if(hash!==release.digest.slice(7))throw Error('SHA256 не збігається з релізом');
+   }
+   return buffer;
+  }catch(e){last=e.message}
+ }
+ throw Error('Не вдалося завантажити образ із CDN: '+last+'. Резерв: ручне OTA з гілки ota на GitHub.');
+}
+function selfUpdate(){
+ if(!otaRelease){otaError('Спочатку натисни Check Update');return}
+ var target=otaRelease;
+ if(!confirm('Встановити '+target.tag+' по Wi-Fi? Браузер завантажить .bin і передасть його GeekMagic. Живлення не відключати.'))return;
  $('ghUpBtn').disabled=true;$('chkBtn').disabled=true;
- $('ghMsg').textContent='Downloading and flashing... this can take a couple of minutes and the device may reboot twice.';
- // Installed version, read synchronously from the already-loaded status so the
- // poller below can recognise success (new version) without racing a fetch.
- var cur=(($('fwVer').textContent||'').trim().split(' ').pop())||'';
- j('/api/selfupdate',{method:'POST'}).then(function(){
-  var n=0;var t=setInterval(function(){n++;
-   j('/api/status').then(function(s){
-    if(cur&&s.version&&s.version!==cur){clearInterval(t);$('ghMsg').textContent='Updated to '+s.version+'.';$('chkBtn').disabled=false;return}
-    var m=s.updateMsg||'';
-    if(m&&m!=='starting...'&&m!=='updating...'){clearInterval(t);$('ghMsg').textContent='Update failed: '+m;$('chkBtn').disabled=false}
-   }).catch(function(){});
-   if(n>100)clearInterval(t);
-  },3000);
- }).catch(function(){$('ghMsg').textContent='Could not start update';$('chkBtn').disabled=false})}
-
+ $('ghMsg').textContent='Завантаження '+target.tag+' з GitHub CDN...';
+ return otaDownloadFirmware(target).then(function(buffer){
+  $('ghMsg').textContent='Прошивка отримана ('+buffer.byteLength+' байтів). Передаю на GeekMagic...';
+  var form=new FormData();
+  form.append('firmware',new Blob([buffer],{type:'application/octet-stream'}),'smalltv-mod-firmware.bin');
+  var req=new XMLHttpRequest();
+  req.open('POST','/update',true);
+  req.timeout=120000;
+  req.withCredentials=true;
+  req.upload.onprogress=function(ev){
+   if(ev.lengthComputable)
+    $('ghMsg').textContent='Прошивання через Wi-Fi: '+Math.round(100*ev.loaded/ev.total)+'%. Не вимикай живлення.';
+  };
+  req.onload=function(){
+   if(req.status===200&&req.responseText.trim()==='OK'){
+    $('ghMsg').textContent='Образ '+target.tag+' записано. GeekMagic перезавантажується...';
+    setTimeout(function(){location.reload()},8500);
+   }else{
+    otaError('Пристрій відхилив файл: HTTP '+req.status+' '+String(req.responseText||'').slice(0,160));
+   }
+  };
+  req.onerror=function(){otaError('Втрачено зв\'язок із пристроєм. Якщо GeekMagic перезавантажився, перевір номер версії.')};
+  req.ontimeout=function(){otaError('Передавання вичерпало час очікування. Перевір пристрій.')};
+  req.send(form);
+ }).catch(function(e){otaError(e.message)});
+}
 // settings backup
 function importCfg(){var f=$('cfgFile').files[0];if(!f){toast('Pick a config .json first');return}
  var r=new FileReader();

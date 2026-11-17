@@ -96,8 +96,11 @@ jobs:
       - name: Check release asset names
         run: python3 tools/ci_checks.py assets
 
-      # The firmware serves src/webui.h, not webui.html. A commit that edits
-      # the HTML without regenerating the header ships the old page.
+      # The HTML source is authoritative in this fork. Regenerate the compressed
+      # header on the runner before every firmware build so the uploaded .bin
+      # always contains the latest Air Alerts web settings.
+      - name: Generate compressed web UI
+        run: python3 tools/gzip_webui.py
       - name: Check webui.h matches webui.html
         run: python3 tools/gzip_webui.py --check
 
@@ -205,6 +208,11 @@ jobs:
       - name: Test firmware upload memory check
         run: sh tests/update/run.sh
 
+      - name: Test aviation mascot and air-alerts display refresh
+        run: |
+          node tests/mascot/test_aviation_release.js
+          node tests/alerts/test_display_refresh.js
+
       - name: Test crash record labels and boot decisions
         run: |
           c++ -std=c++11 -Wall -Wextra -Werror -g -Isrc tests/test_crash_record.cpp -o /tmp/smalltv-crash-tests
@@ -274,6 +282,46 @@ jobs:
         with:
           name: smalltv-mod-firmware
           path: dist
+
+      # Keep the browser OTA CDN branch in sync with the exact tested image
+      # before making a new GitHub Release visible to devices. The OTA branch
+      # contains public, versioned binaries only. This job checks out NO repo
+      # code with the write token; only the firmware artifact is copied.
+      - name: Publish versioned browser OTA image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OTA_REPO: ${{ github.repository }}
+          OTA_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test -s dist/smalltv-mod-firmware.bin
+          case "$OTA_TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Unexpected release tag: $OTA_TAG"; exit 1 ;;
+          esac
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('dist/smalltv-mod-firmware.bin')
+          data = p.read_bytes()
+          assert len(data) > 300000 and data[0] == 0xE9, "Not an ESP8266 application image"
+          PY
+          tmpdir="$(mktemp -d)"
+          cd "$tmpdir"
+          git init -q -b ota
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add origin "https://github.com/${OTA_REPO}.git"
+          gh auth setup-git
+          if git fetch -q --depth=1 origin ota; then
+            git checkout -q -B ota FETCH_HEAD
+          fi
+          mkdir -p firmware
+          cp "$GITHUB_WORKSPACE/dist/smalltv-mod-firmware.bin" "firmware/${OTA_TAG}.bin"
+          git add "firmware/${OTA_TAG}.bin"
+          if ! git diff --cached --quiet; then
+            git commit -q -m "ota: publish ${OTA_TAG} ESP8266 firmware"
+            git push -q origin HEAD:refs/heads/ota
+          fi
 
       # generate_release_notes fills the body with the commits and PRs since the
       # previous tag, so a release is never published blank. Editing the release

@@ -9,6 +9,7 @@ static const char* CONFIG_PATH = "/config.json";
 // the filesystem, known without building the settings document again.
 static size_t g_storedSize = 0;
 
+#if WITH_TICKER
 // ===========================================================================
 // Ticker slice
 // ===========================================================================
@@ -125,6 +126,66 @@ void TickerSettings::fromJson(JsonObjectConst o) {
   }
 }
 
+#endif // WITH_TICKER
+
+// ===========================================================================
+// Aviation mascot preferences (100 original and public-domain adapted quotes)
+// ===========================================================================
+void MascotSettings::setDefaults(){
+  enabled=true;intervalMin=30;speechSec=60;roamSec=30;focus=0;
+}
+void MascotSettings::toJson(JsonObject o) const {
+  o["enabled"]=enabled;
+  o["intervalMin"]=intervalMin;
+  o["speechSec"]=speechSec;
+  o["roamSec"]=roamSec;
+  o["focus"]=focus;
+}
+void MascotSettings::fromJson(JsonObjectConst o) {
+  if(o["enabled"].is<bool>()) enabled=o["enabled"];
+  if(o["intervalMin"].is<int>()) intervalMin=constrain((int)o["intervalMin"],5,240);
+  if(o["speechSec"].is<int>())speechSec=constrain((int)o["speechSec"],10,300);
+  if(o["roamSec"].is<int>())roamSec=constrain((int)o["roamSec"],5,180);
+  if(o["focus"].is<int>())focus=constrain((int)o["focus"],0,2);
+}
+
+// ===========================================================================
+// Air Alerts slice
+// ===========================================================================
+void AlertsSettings::setDefaults() {
+  enabled = true;
+  notify = true;
+  uid = 14;              // Kyiv Oblast
+  label = "КИЇВСЬКА ОБЛАСТЬ";
+  token = "";
+  pollSec = 60;
+}
+void AlertsSettings::toJson(JsonObject o, bool includeSecrets) const {
+  o["enabled"] = enabled;
+  o["notify"] = notify;
+  o["uid"] = uid;
+  o["label"] = label;
+  o["pollSec"] = pollSec;
+  o["tokenSet"] = token.length() > 0;
+  if (includeSecrets) o["token"] = token;
+}
+void AlertsSettings::fromJson(JsonObjectConst o) {
+  if (o["enabled"].is<bool>()) enabled = o["enabled"];
+  if (o["notify"].is<bool>()) notify = o["notify"];
+  if (o["uid"].is<int>()) uid = constrain((int)o["uid"], 1, 999);
+  if (o["pollSec"].is<int>()) pollSec = constrain((int)o["pollSec"], 30, 600);
+  if (o["label"].is<const char*>()) {
+    String v = o["label"].as<String>();
+    v.trim();
+    if (v.length() <= 72) label = v;
+  }
+  if (o["clearToken"].is<bool>() && o["clearToken"].as<bool>()) token = "";
+  if (o["token"].is<const char*>()) {
+    String v = o["token"].as<String>(); v.trim();
+    if (v.length() && v.length() <= 256) token = v;  // empty keeps stored secret
+  }
+}
+
 // ===========================================================================
 // Usage slice
 // ===========================================================================
@@ -166,7 +227,8 @@ static String minToHhmm(uint16_t v) {
 void ClockSettings::setDefaults() {
   tz            = DEFAULT_TZ_NAME;
   tzPosix       = DEFAULT_TZ_POSIX;
-  lang          = "en";
+  lang          = "uk";
+  face          = 0;
   nightEnabled  = DEFAULT_NIGHT_ENABLED;
   nightStartMin = DEFAULT_NIGHT_START_MIN;
   nightEndMin   = DEFAULT_NIGHT_END_MIN;
@@ -182,6 +244,7 @@ void ClockSettings::toJson(JsonObject o) const {
   o["tz"]           = tz;
   o["tzPosix"]      = tzPosix;
   o["lang"]         = lang;
+  o["face"]         = face;
   o["nightEnabled"] = nightEnabled;
   o["nightStart"]   = minToHhmm(nightStartMin);
   o["nightEnd"]     = minToHhmm(nightEndMin);
@@ -200,8 +263,9 @@ void ClockSettings::fromJson(JsonObjectConst o) {
   if (o["tzPosix"].is<const char*>())     tzPosix = o["tzPosix"].as<String>();
   if (o["lang"].is<const char*>()) {
     const char* code = o["lang"];
-    if (smalltv::languageIndex(code, strlen(code)) >= 0) lang = code;   // an unknown code keeps the old one
+    if (!strcmp(code, "uk") || smalltv::languageIndex(code, strlen(code)) >= 0) lang = code;   // an unknown code keeps the old one
   }
+  if (o["face"].is<int>()) face = constrain((int)o["face"], 0, 4);
   if (o["nightEnabled"].is<bool>())       nightEnabled = o["nightEnabled"];
   if (o["nightStart"].is<const char*>())  nightStartMin = hhmmToMin(o["nightStart"], nightStartMin);
   if (o["nightEnd"].is<const char*>())    nightEndMin   = hhmmToMin(o["nightEnd"], nightEndMin);
@@ -504,7 +568,11 @@ void Settings::setDefaults() {
   mode = DEFAULT_MODE;
   themeId = "";
   carouselSec = DEFAULT_CAROUSEL_SEC;
-  carouselTicker = carouselUsage = carouselRadar = carouselHa = true;
+  carouselTicker = (bool)WITH_TICKER;
+  carouselAlerts = true;
+  carouselClock = false;
+  carouselMascot = false;
+  carouselUsage = carouselRadar = carouselHa = true;
   carouselTheme = false;   // opt in: needs an installed theme, else the slot shows an error
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
 
@@ -513,7 +581,11 @@ void Settings::setDefaults() {
   backlightInverted = TFT_BL_DEFAULT_INVERTED;
   rotation = 0;
 
+#if WITH_TICKER
   ticker.setDefaults();
+#endif
+  alerts.setDefaults();
+  mascot.setDefaults();
   usage.setDefaults();
   radar.setDefaults();
   ha.setDefaults();
@@ -596,13 +668,19 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
                             : (s.mode == MODE_RADAR)    ? "radar"
                             : (s.mode == MODE_USAGE)    ? "usage"
                             : (s.mode == MODE_HA)       ? "ha"
-                            : (s.mode == MODE_CAROUSEL) ? "carousel" : "stocks";
+                            : (s.mode == MODE_CAROUSEL) ? "carousel"
+                            : (s.mode == MODE_ALERTS)   ? "alerts"
+                            : (s.mode == MODE_CLOCK)    ? "clock"
+                            : (s.mode == MODE_MASCOT)   ? "mascot" : "stocks";
   root["carouselSec"]       = s.carouselSec;
   root["carouselTicker"]    = s.carouselTicker;
   root["carouselUsage"]     = s.carouselUsage;
   root["carouselRadar"]     = s.carouselRadar;
   root["carouselHa"]        = s.carouselHa;
   root["carouselTheme"]     = s.carouselTheme;
+  root["carouselAlerts"]    = s.carouselAlerts;
+  root["carouselClock"]     = s.carouselClock;
+  root["carouselMascot"]    = s.carouselMascot;
   root["httpTimeout"]       = s.httpTimeout;
   root["brightness"]        = s.brightness;
   root["autoBrightness"]    = s.autoBrightness;
@@ -610,10 +688,20 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   root["rotation"]          = s.rotation;
 
   // Feature slices
+#if WITH_TICKER
   s.ticker.toJson(root["ticker"].to<JsonObject>());
+#endif
+  s.alerts.toJson(root["alerts"].to<JsonObject>(), includeSecrets);
+  s.mascot.toJson(root["mascot"].to<JsonObject>());
+#if WITH_USAGE
   s.usage.toJson(root["usage"].to<JsonObject>());
+#endif
+#if WITH_RADAR
   s.radar.toJson(root["radar"].to<JsonObject>());
+#endif
+#if WITH_HA
   s.ha.toJson(root["ha"].to<JsonObject>(), includeSecrets);
+#endif
   s.clock.toJson(root["clock"].to<JsonObject>());
   s.display.toJson(root["display"].to<JsonObject>());
   s.wg.toJson(root["wg"].to<JsonObject>(), includeSecrets);
@@ -672,9 +760,18 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
            : m.equalsIgnoreCase("usage")    ? MODE_USAGE
            : m.equalsIgnoreCase("ha")       ? MODE_HA
            : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL
-           : m.equalsIgnoreCase("stocks")   ? MODE_STOCKS
+           : m.equalsIgnoreCase("mascot")   ? MODE_MASCOT
+           : m.equalsIgnoreCase("clock")    ? MODE_CLOCK
+           : m.equalsIgnoreCase("alerts")   ? MODE_ALERTS
+           : m.equalsIgnoreCase("stocks")   ? (WITH_TICKER ? MODE_STOCKS : MODE_CLOCK)
            : s.mode;   // empty or unknown: a save that names no mode keeps the stored one
   }
+  // Existing stored legacy modes must not remain selected after slimming.
+#if !WITH_HA || !WITH_RADAR || !WITH_USAGE || !WITH_TICKER
+  if ((!WITH_HA && s.mode==MODE_HA) || (!WITH_RADAR && s.mode==MODE_RADAR) ||
+      (!WITH_USAGE && s.mode==MODE_USAGE) || (!WITH_TICKER && s.mode==MODE_STOCKS))
+    s.mode=MODE_CLOCK;
+#endif
   if (root["themeId"].is<const char*>()) {
     String id = root["themeId"].as<String>();
     bool valid = id.length() <= 48;
@@ -690,6 +787,9 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   if (root["carouselRadar"].is<bool>())   s.carouselRadar = root["carouselRadar"];
   if (root["carouselHa"].is<bool>())      s.carouselHa = root["carouselHa"];
   if (root["carouselTheme"].is<bool>())   s.carouselTheme = root["carouselTheme"];
+  if (root["carouselAlerts"].is<bool>())  s.carouselAlerts = root["carouselAlerts"];
+  if (root["carouselClock"].is<bool>())   s.carouselClock = root["carouselClock"];
+  if (root["carouselMascot"].is<bool>())  s.carouselMascot = root["carouselMascot"];
 
   if (root["httpTimeout"].is<int>())        s.httpTimeout = constrain((int)root["httpTimeout"], 1000, 20000);
   if (root["brightness"].is<int>())         s.brightness = constrain((int)root["brightness"], 0, 100);
@@ -700,14 +800,24 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   // Feature slices: prefer the nested object; fall back to the top level so a
   // legacy flat config.json (or a legacy POST) still applies. The old shared
   // "pollSec" thus seeds both ticker and usage cadence on first upgrade.
+#if WITH_TICKER
   JsonObjectConst t = root["ticker"].is<JsonObjectConst>() ? root["ticker"].as<JsonObjectConst>() : root;
   s.ticker.fromJson(t);
+#endif
+  if (root["alerts"].is<JsonObjectConst>()) s.alerts.fromJson(root["alerts"].as<JsonObjectConst>());
+  if (root["mascot"].is<JsonObjectConst>()) s.mascot.fromJson(root["mascot"].as<JsonObjectConst>());
   JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
+#if WITH_USAGE
   s.usage.fromJson(u);
+#endif
   // Radar has no legacy flat layout; only apply when its nested object is present.
+#if WITH_RADAR
   if (root["radar"].is<JsonObjectConst>()) s.radar.fromJson(root["radar"].as<JsonObjectConst>());
+#endif
   // HA has no legacy flat layout either; only apply when its object is present.
+#if WITH_HA
   if (root["ha"].is<JsonObjectConst>()) s.ha.fromJson(root["ha"].as<JsonObjectConst>());
+#endif
   if (root["clock"].is<JsonObjectConst>()) s.clock.fromJson(root["clock"].as<JsonObjectConst>());
   if (root["display"].is<JsonObjectConst>()) s.display.fromJson(root["display"].as<JsonObjectConst>());
   if (root["wg"].is<JsonObjectConst>()) s.wg.fromJson(root["wg"].as<JsonObjectConst>());
