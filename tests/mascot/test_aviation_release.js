@@ -17,6 +17,19 @@ const delta=mascot.split('static void drawSpriteDelta(')[1].split('} // namespac
 assert(!delta.includes('fillScreen(') && !delta.includes('fillRect('), 'Walking must update only changed pixels without erasing rectangles');
 assert(mascot.includes('drawSpriteDelta('), 'Sprite delta-rendering missing');
 assert(mascot.includes('draw16bitRGBBitmap('), 'Smooth motion must send multi-row RGB565 tiles, not thousands of per-scanline writes');
+assert(mascot.includes('PlaneAtlas.generated.h') && mascot.includes('pgm_read_byte(&planeflash::frames['),
+  'ESP8266 must use pre-rendered palette sprites from Flash, not polygon math per pixel');
+assert(mascot.includes('kTileRows=12,kTileCols=24') &&
+  mascot.includes('if(changed)gfx->draw16bitRGBBitmap(left,top,tile,width,height);'),
+  'Only individually dirty 24x12 tiles should be sent to ST7789');
+assert(mascot.includes('nextAnimationMs_=now+90UL;') &&
+  mascot.includes('const uint32_t frame=(now-roamStartMs_)/90UL;'),
+  'Animation pacing must target 11fps using elapsed time');
+const atlasGenerator=read('tools/generate_plane_atlas.py');
+assert(atlasGenerator.includes('static uint8_t mascotPixel(') &&
+  atlasGenerator.includes('STRIDE * POSES') &&
+  atlasGenerator.includes('POSES = 12'),
+  'Atlas generator must reuse the actual detailed airplane geometry and validate output');
 assert(mascot.includes('struct PlanePose') && mascot.includes('p.invX=') &&
   mascot.includes('p.scale=(int16_t)constrain('),
   'The standalone hero must perform scaled, perspective 3-D style turns');
